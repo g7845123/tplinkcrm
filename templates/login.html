@@ -1,0 +1,40 @@
+{% extends "public_template.html" %}
+
+{% block head %}
+<script src='https://www.google.com/recaptcha/api.js'></script>
+{% endblock %}
+
+{% block content %}
+<form id="loginform" class="form-horizontal col-sm-10" style="max-width:330px;" method='post'>
+    <div class="input-group">
+        <span class="input-group-addon"><i class="glyphicon glyphicon-user"></i></span>
+        <input id="login-email" type="text" class="form-control" name="email" value="" placeholder="Email"> 
+    </div>
+    <div class='text-danger' id='login-email-error'>{{error_msg['emailError']}}</div>
+    <div class="input-group">
+        <span class="input-group-addon"><i class="glyphicon glyphicon-lock"></i></span>
+        <input id="login-passwd" type="password" class="form-control" name="passwd" placeholder="password">
+    </div>
+    <div class='text-danger' id='login-passwd-error'>{{error_msg['passwdError']}}</div>
+    {% if recaptcha %}
+    <div class="g-recaptcha" data-sitekey="6LcvMFYUAAAAADE-VwmDU9jDosjtHhtJN5Rh4pES"></div>
+    <div class='text-danger' id='login-captcha-error'>{{error_msg['captchaError']}}</div>
+    {% endif %}
+    <div class="input-group">
+        <div class="checkbox">
+            <label>
+                <input id="login-remember" type="checkbox" name="remember" value="1"> Remember me
+            </label>
+        </div>
+        <div><a href="/forgot">Forgot password?</a></div>
+        <div style="margin-top:10px" class="form-group">
+            <div class="col-sm-12 controls">
+                <input type="submit" value="Login" id='login-btn' class="btn btn-success">
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block script %}
+{% endblock %}

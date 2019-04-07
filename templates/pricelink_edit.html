@@ -1,0 +1,47 @@
+{% extends "template.html" %}
+{% block head %}
+<link href="{{url_for('static', filename='css/select2.min.css')}}" rel="stylesheet" />
+{% endblock %}
+
+{% block content %}
+    <h2>Edit Pricelink</h2>
+    <h3>Step 1: Select Product</h2>
+    <select id="product">
+        <option></option>
+        {% for product in products %}
+        <option value={{product.id}} {% if product.id == product_id %} selected="selected" {% endif %}>{{product.sku}}</option>
+        {% endfor %}
+    </select>
+    {% if product_id != 0 %}
+    <h3>Step 2: Edit Links</h2>
+    {% for account in accounts %}
+    <label for="{{account}}">{{account}} </label>
+    <form class="form-row" id="{{account}}" method="POST">
+        <div class="col-md-8">
+            <input type="hidden" name="account" value="{{account}}">
+            <input type="text" class="form-control" placeholder="Empty link" name="link" value="{{pricelink_dict.get(account, '')}}">
+        </div>
+        <div class="col-md-4">
+            <button type="submit" class="btn btn-primary">Update</button>
+        </div>
+    </form>
+    {% endfor %}
+    {% endif %}
+
+{% endblock %}
+
+{% block script %}
+<!-- Select2 -->
+<script src="{{url_for('static', filename='js/select2.min.js')}}"></script>
+
+<script>
+var select2 = $("#product").select2({
+    placeholder: "Select a SKU",
+    width: '50%', 
+});
+select2.on("select2:select", function () { 
+    var product_id = $("#product").select2("data")[0].id;
+    window.location.href = '/pricelink/edit?product=' + product_id; 
+});
+</script>
+{% endblock %}

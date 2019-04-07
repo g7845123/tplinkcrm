@@ -1,0 +1,93 @@
+{% extends "template.html" %}
+{% block content %}
+    <h1 class="page-header">
+        View Sellout
+    </h1>
+    {% for account in accounts %}
+        {% for sku in skus%}
+        <h2>
+            {{account}} {{sku}} sellout
+        </h2>
+        <div id="{{account}}-{{sku}}" style="height: 300px"></div>
+        {% endfor%}
+    {% endfor %}
+{% endblock %}
+{% block script%}
+    <!-- Resources -->
+    <script src="{{url_for('static', filename='amcharts/amcharts.js')}}"></script>
+    <script src="{{url_for('static', filename='amcharts/serial.js')}}"></script>
+    <script src="{{url_for('static', filename='amcharts/plugins/export/export.min.js')}}"></script>
+    <link rel="stylesheet" href="{{url_for('static', filename='amcharts/plugins/export/export.css')}}" type="text/css" media="all" />
+    <script src="{{url_for('static', filename='amcharts/themes/light.js')}}"></script>
+
+    <!-- Chart code -->
+    {% for account in accounts %}
+        {% for sku in skus %}
+        <script>
+        var chartData = [
+            {% for data in sellout_dict[sku][account] %}
+            {
+                date: new Date({{data[0]}}), 
+                sellout: {{data[1]}},
+            }, 
+            {% endfor %}
+        ]
+        var chart = AmCharts.makeChart("{{account}}-{{sku}}", {
+            "type": "serial",
+            "theme": "light",
+            "marginRight": 80,
+            "autoMarginOffset": 20,
+            "marginTop": 7,
+            "dataProvider": chartData, 
+            "valueAxes": [{
+                "axisAlpha": 0.2,
+                "dashLength": 1,
+                "position": "left"
+            }],
+            "mouseWheelZoomEnabled": false,
+            "graphs": [{
+                "id": "g1",
+                "balloonText": "[[value]]",
+                "bullet": "round",
+                "bulletBorderAlpha": 1,
+                "bulletColor": "#FFFFFF",
+                "hideBulletsCount": 50,
+                "title": "red line",
+                "valueField": "sellout",
+                "useLineColorForBulletBorder": true,
+                "balloon":{
+                    "drop":true
+                }
+            }],
+            "chartScrollbar": {
+                "autoGridCount": true,
+                "graph": "g1",
+                "scrollbarHeight": 40
+            },
+            "chartCursor": {
+               "limitToGraph":"g1"
+            },
+            "categoryField": "date",
+            "categoryAxis": {
+                "parseDates": true,
+                "axisColor": "#DADADA",
+                "dashLength": 1,
+                "minorGridEnabled": true
+            },
+            "export": {
+                "enabled": false
+            }
+        });
+
+        chart.addListener("rendered", zoomChart);
+        zoomChart();
+
+        // this method is called when chart is first inited as we listen for "rendered" event
+        function zoomChart() {
+            // different zoom methods can be used - zoomToIndexes, zoomToDates, zoomToCategoryValues
+            chart.zoomToIndexes(chartData.length - 40, chartData.length - 1);
+        }
+        </script>
+        {% endfor %}
+    {% endfor %}
+{% endblock %}

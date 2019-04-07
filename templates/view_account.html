@@ -1,0 +1,673 @@
+{% extends "template.html" %}
+
+{% block head %}
+{% endblock %}
+
+{% block content %}
+
+<!-- Modal -->
+<div class="modal fade" id="form-modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-body" id="modal-body"></div>
+    </div>
+  </div>
+</div>
+
+    <h1 class="page-header">
+         Details
+    </h1>
+    <h2>Basic info <button class="btn btn-primary" onclick="basicInfoEdit()" type="button">Edit</button></h2>
+    <div>
+        <label for="account-name">Account name</label>
+        <span id="account-name">{{account.name}}</span>
+    </div>
+    <div>
+        <label for="account-tax">Tax number</label>
+        <span id="account-tax">{{account.tax}}</span>
+    </div>
+    <div>
+        <label for="account-type">Type</label>
+        <span id="account-type">{{account.type}}</span>
+    </div>
+    <div>
+        <label for="account-manager">Manager</label>
+        <span id="account-manager">{{account.manager}}</span>
+    </div>
+    <div>
+        <label for="account-url">Website</label>
+        <span id="account-url"><a href="{{account.url}}" target="_blank">{{account.url}}</a></span>
+    </div>
+
+    <h2>Contacts <button class="btn btn-primary" onclick="newContact()" type="button">Add</button></h2>
+    
+    <form id="new-contact" class="form-group"  method="POST" action="?start={{date_start.strftime('%Y-%m-%d')}}&end={{date_end.strftime('%Y-%m-%d')}}" style="display:none" >
+        <label for="contact-name">Name</label>
+        <input class="form-control" name="contact-name">
+        <label for="contact-title">Title</label>
+        <input class="form-control" name="contact-title">
+        <label for="contact-email">Email</label>
+        <input class="form-control" name="contact-email">
+        <label for="contact-phone">Phone</label>
+        <input class="form-control" name="contact-phone">
+        <label for="contact-mobile">Mobile</label>
+        <input class="form-control" name="contact-mobile">
+        <label for="contact-note">Additional Note</label>
+        <textarea class="form-control" name="contact-note" placeholder="Additional Notes here"></textarea>
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" value="contact-primary" name="contact-primary">
+            <label class="form-check-label" for="contact-primary">Primary Contact</label>
+        </div>
+        <button class="btn btn-primary" type="submit" name="submit" value="new-contact">Submit</button>
+    </form>
+
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Title</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Note</th>
+                <th>Detail</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for idx, row in account_contact_df[account_contact_df['primary']].iterrows() %}
+            <tr class="warning">
+                <td>{{row.contact_name}}</td>
+                <td>{{row.title}}</td>
+                <td>{{row.email}}</td>
+                <td>{{row.phone}}</td>
+                {% if row.note|length < 50 %}
+                <td>{{row.note[:50]}}</td>
+                {% else %}
+                <td>{{row.note[:50]+'...'}}</td>
+                {% endif %}
+                <td><button class="btn btn-link" onclick="contact{{row.id}}Edit()" type="button">Detail</button></td>
+            </tr>
+        {% endfor %}
+        {% for idx, row in account_contact_df[account_contact_df['primary']==False].iterrows() %}
+            <tr>
+                <td>{{row.contact_name}}</td>
+                <td>{{row.title}}</td>
+                <td>{{row.email}}</td>
+                <td>{{row.phone}}</td>
+                {% if row.note|length < 50 %}
+                <td>{{row.note[:50]}}</td>
+                {% else %}
+                <td>{{row.note[:50]+'...'}}</td>
+                {% endif %}
+                <td><button class="btn btn-link" onclick="contact{{row.id}}Edit()" type="button">Detail</button></td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <h2>Customer Profile</h2>
+
+    {% if (account_note_df['type']=='PRIMARY').any() %}
+    {% for idx, row in account_note_df[account_note_df['type']=='PRIMARY'].iterrows() %}
+    <div style="white-space: pre-wrap;">{{row.note}}</div>
+        <button class="btn btn-primary" onclick="note{{row.id}}Edit()" type="button">Edit</button>
+    </form>
+    {% endfor %}
+    {% else %}
+    <div>No data available.<button class="btn btn-link" onclick="newPrimaryNote()" type="button">Add now!</button></div>
+    {% endif %}
+
+
+    <h2>Interaction Log <button class="btn btn-primary" onclick="newNote()" type="button">Add</button></h2>
+
+    {% if (account_note_df['type']!='PRIMARY').any() %}
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Manager</th>
+                <th>Type</th>
+                <th>Note</th>
+                <th>Detail</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for idx, row in account_note_df[account_note_df['type']!='PRIMARY'].iterrows() %}
+                <td>{{row.created.strftime('%Y-%m-%d')}}</td>
+                <td>{{row.manager_name}}</td>
+                <td>{{row.type}}</td>
+                {% if row.note|length < 100 %}
+                <td>{{row.note[:100]}}</td>
+                {% else %}
+                <td>{{row.note[:100]+'...'}}</td>
+                {% endif %}
+                <td><button class="btn btn-link" onclick="note{{row.id}}Edit()" type="button">Detail</button></td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div>No data available</div>
+    {% endif %}
+
+    <h2>Purchase report</h2>
+    {% if not monthview_df.empty %}
+    <div id="sellin-by-month" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Month</th>
+                {% for column in monthview_df.columns %}
+                <th>{{column}}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for idx, row in monthview_df.iterrows() %}
+            <tr>
+                <td>{{idx}}</td>
+                {% for column in monthview_df.columns %}
+                <td>{{row[column]/100}}</td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div>No data available</div>
+    {% endif %}
+
+    <h2>Sellin Overview</h2>
+    {% if not overview_df.empty %}
+    <div id="sellin-overview" style="width: 310px; height: 400px; margin: 0 auto"></div>
+    {% else %}
+    <div>No data available</div>
+    {% endif %}
+
+    <h2>Sellin by Distributor</h2>
+    {% if not distri_df.empty %}
+    <div id="sellin-distri" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
+    {% else %}
+    <div>No data available</div>
+    {% endif %}
+
+    <h2>Sellin by Category</h2>
+    {% if not category_df.empty %}
+    <div id="sellin-category" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
+    {% else %}
+    <div>No data available</div>
+    {% endif %}
+
+    <h2>Sellin by Sub-category</h2>
+    {% if not sub_category_df.empty %}
+    <div id="sellin-sub-category" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
+    {% else %}
+    <div>No data available</div>
+    {% endif %}
+
+    <h2>Sellin by SKU</h2>
+    {% if not sku_df.empty %}
+    <label class="radio-inline"><input type="radio" name="sellin-sku-optradio" checked="checked" id="sellin-sku-revenue">Revenue</label>
+    <label class="radio-inline"><input type="radio" name="sellin-sku-optradio" id="sellin-sku-qty">Qty</label>
+    <div id="sellin-sku" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
+    {% else %}
+    <div>No data available</div>
+    {% endif %}
+{% endblock %}
+
+{% block script %}
+<script src="{{url_for('static', filename='highcharts/highcharts.js')}}"></script>
+<script src="{{url_for('static', filename='highcharts/modules/exporting.js')}}"></script>
+
+<script>
+var adaptiveTextarea = function() {
+    $('textarea').each(function () {
+        this.setAttribute('style', 'height:' + Math.max(50, this.scrollHeight) + 'px;overflow-y:hidden;');
+    }).on('input', function () {
+        this.style.height = 'auto';
+        this.style.height = this.scrollHeight + 'px';
+    });
+}
+adaptiveTextarea();
+var newNote = function() {
+    var modalBody = $('#modal-body');
+    var newNoteForm = `
+        <form class="form-group"  method="POST" action="?start={{date_start.strftime('%Y-%m-%d')}}&end={{date_end.strftime('%Y-%m-%d')}}">
+            <label for="type">Type</label>
+            <select class="form-control" name="type" id="note-type">
+                <option id='note-type-default' selected>Choose a note type</option>
+                <option value="MEETING">Meeting</option>
+                <option value="CALL">Call</option>
+                <option value="EMAIL">Email</option>
+                <option value="INVESTMENT">Investment</option>
+            </select>
+            <label for="note-creator">Creator</label>
+            <select class="form-control" name="note-creator">
+                {% for manager in managers %}
+                <option value={{manager.id}} {% if manager.id == user.id %}selected{% endif %}>{{manager.name}}</option>
+                {% endfor %}
+            </select>
+            <label for="note">Note</label>
+            <textarea class="form-control" name="note" placeholder="Edit Notes here"></textarea>
+            <button class="btn btn-primary" type="submit" name="submit" value="new-note">Submit</button>
+        </form>
+    `;
+    modalBody.html(newNoteForm);
+    $('#form-modal').modal('show');
+    adaptiveTextarea();
+};
+var newPrimaryNote = function() {
+    var modalBody = $('#modal-body');
+    var newNoteForm = `
+        <form id="new-note" class="form-group"  method="POST" action="?start={{date_start.strftime('%Y-%m-%d')}}&end={{date_end.strftime('%Y-%m-%d')}}">
+            <label for="type">Type</label>
+            <select class="form-control" name="type" id="note-type" readonly>
+                <option id="note-type-primary" value="PRIMARY" selected>Primary</option>
+            </select>
+            <label for="note-creator">Creator</label>
+            <select class="form-control" name="note-creator">
+                {% for manager in managers %}
+                <option value={{manager.id}} {% if manager.id == user.id %}selected{% endif %}>{{manager.name}}</option>
+                {% endfor %}
+            </select>
+            <label for="note">Note</label>
+            <textarea class="form-control" name="note" placeholder="Edit Notes here"></textarea>
+            <button class="btn btn-primary" type="submit" name="submit" value="new-note">Submit</button>
+        </form>
+    `;
+    modalBody.html(newNoteForm);
+    $('#form-modal').on('shown.bs.modal', adaptiveTextarea);
+    $('#form-modal').modal('show');
+};
+var newContact = function() {
+    $('#new-contact').show();
+};
+{% for idx, row in account_contact_df.iterrows() %}
+var contact{{row.id}}Edit = function() {
+    // $('#contact-{{row.id}}').toggle();
+    var modalBody = $('#modal-body');
+    var contactForm = `
+        <form id="contact-{{row.id}}" class="form-group"  method="POST" action="?start={{date_start.strftime('%Y-%m-%d')}}&end={{date_end.strftime('%Y-%m-%d')}}">
+            <input name="contact-id" type="hidden" value={{row.id}}>
+            <label for="contact-name">Name</label>
+            <input class="form-control" name="contact-name" value="{{row.contact_name}}">
+            <label for="contact-title">Title</label>
+            <input class="form-control" name="contact-title" value="{{row.title}}">
+            <label for="contact-email">Email</label>
+            <input class="form-control" name="contact-email" value="{{row.email}}">
+            <label for="contact-phone">Phone</label>
+            <input class="form-control" name="contact-phone" value="{{row.phone}}">
+            <label for="contact-mobile">Mobile</label>
+            <input class="form-control" name="contact-mobile" value="{{row.mobile}}">
+            <label for="contact-note">Additional Note</label>
+            <textarea class="form-control" name="contact-note" placeholder="Additional Notes here">{{row.note}}</textarea>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" value="contact-primary" name="contact-primary" {% if row['primary'] %} checked {% endif %}>
+                <label class="form-check-label" for="contact-primary">Primary Contact</label>
+            </div>
+            <button class="btn btn-primary" type="submit" name="submit" value="edit-contact">Submit</button>
+        </form>
+    `;
+    modalBody.html(contactForm);
+    $('#form-modal').on('shown.bs.modal', adaptiveTextarea);
+    $('#form-modal').modal('show');
+    
+};
+{% endfor %}
+{% for idx, row in account_note_df.iterrows() %}
+var note{{row.id}}Edit = function() {
+    var modalBody = $('#modal-body');
+    var noteForm = `
+        <form class="form-group"  method="POST" action="?start={{date_start.strftime('%Y-%m-%d')}}&end={{date_end.strftime('%Y-%m-%d')}}">
+            <input name="note-id" type="hidden" value={{row.id}}>
+            <textarea class="form-control" id="note-{{row.id}}" name="note">{{row.note}}</textarea>
+            <button class="btn btn-primary" type="submit" name="submit" value="edit-note">Submit</button>
+        </form>
+    `;
+    modalBody.html(noteForm);
+    $('#form-modal').on('shown.bs.modal', adaptiveTextarea);
+    $('#form-modal').modal('show');
+};
+{% endfor %}
+
+{% if not monthview_df.empty %}
+Highcharts.chart('sellin-by-month', {
+    chart: {
+        type: 'column'
+    },
+    title: {
+        text: 'Sellin by Month'
+    },
+    xAxis: {
+        categories: [
+            {% for idx, column in monthview_df.drop(columns=['Total']).iteritems() %}
+            '{{idx}}', 
+            {% endfor %}
+        ],
+        crosshair: true
+    },
+    yAxis: {
+        min: 0,
+        title: {
+            text: 'Sellin (EUR)'
+        }
+    },
+    tooltip: {
+        headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
+        pointFormat: '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' +
+            '<td style="padding:0"><b>{point.y:.1f} EUR</b></td></tr>',
+        footerFormat: '</table>',
+        shared: true,
+        useHTML: true
+    },
+    plotOptions: {
+        column: {
+            pointPadding: 0.2,
+            borderWidth: 0
+        }
+    },
+    series: [
+        {% for idx, column in monthview_df.drop(columns=['Total']).iterrows() %}
+        {
+            name: "{{idx}}", 
+            data: [
+                {% for e in column %}
+                {{e/100}},
+                {% endfor %}
+            ]
+        }, 
+        {% endfor %}
+    ]
+});
+{% endif %}
+
+{% if not overview_df.empty %}
+Highcharts.chart('sellin-overview', {
+    chart: {
+        type: 'column'
+    },
+    title: {
+        text: 'Sellin Overview ({{date_start.strftime("%b %d")}} - {{date_end.strftime("%b %d")}})'
+    },
+    xAxis: {
+        categories: [''],
+        crosshair: true
+    },
+    yAxis: {
+        min: 0,
+        title: {
+            text: 'Sellin (EUR)'
+        }
+    },
+    tooltip: {
+        headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
+        pointFormat: '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' +
+            '<td style="padding:0"><b>{point.y:.1f} EUR</b></td></tr>',
+        footerFormat: '</table>',
+        shared: true,
+        useHTML: true
+    },
+    plotOptions: {
+        column: {
+            pointPadding: 0.2,
+            borderWidth: 0
+        }
+    },
+    series: [
+        {% for idx, row in overview_df.iterrows() %}
+        {
+            name: "{{idx}}", 
+            data: [
+                {{row.revenue/100}},
+            ]
+        }, 
+        {% endfor %}
+    ]
+});
+{% endif %}
+
+{% if not category_df.empty %}
+Highcharts.chart('sellin-distri', {
+    chart: {
+        type: 'column'
+    },
+    title: {
+text: 'Sellin by Distributor ({{date_start.strftime("%b %d")}} - {{date_end.strftime("%b %d")}})'
+    },
+    xAxis: {
+        categories: [
+            {% for idx, row in distri_df.iterrows() %}
+            '{{idx}}', 
+            {% endfor %}
+        ],
+        crosshair: true
+    },
+    yAxis: {
+        min: 0,
+        title: {
+            text: 'Sellin (EUR)'
+        }
+    },
+    tooltip: {
+        headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
+        pointFormat: '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' +
+            '<td style="padding:0"><b>{point.y:.1f} EUR</b></td></tr>',
+        footerFormat: '</table>',
+        shared: true,
+        useHTML: true
+    },
+    plotOptions: {
+        column: {
+            pointPadding: 0.2,
+            borderWidth: 0
+        }
+    },
+    series: [
+        {% for idx, column in distri_df.iteritems() %}
+        {
+            name: "{{idx}}", 
+            data: [
+                {% for e in column %}
+                {{e/100}},
+                {% endfor %}
+            ]
+        }, 
+        {% endfor %}
+    ]
+});
+{% endif %}
+
+
+{% if not category_df.empty %}
+Highcharts.chart('sellin-category', {
+    chart: {
+        type: 'column'
+    },
+    title: {
+text: 'Sellin by Category ({{date_start.strftime("%b %d")}} - {{date_end.strftime("%b %d")}})'
+    },
+    xAxis: {
+        categories: [
+            {% for idx, row in category_df.iterrows() %}
+            '{{idx}}', 
+            {% endfor %}
+        ],
+        crosshair: true
+    },
+    yAxis: {
+        min: 0,
+        title: {
+            text: 'Sellin (EUR)'
+        }
+    },
+    tooltip: {
+        headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
+        pointFormat: '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' +
+            '<td style="padding:0"><b>{point.y:.1f} EUR</b></td></tr>',
+        footerFormat: '</table>',
+        shared: true,
+        useHTML: true
+    },
+    plotOptions: {
+        column: {
+            pointPadding: 0.2,
+            borderWidth: 0
+        }
+    },
+    series: [
+        {% for idx, column in category_df.iteritems() %}
+        {
+            name: "{{idx}}", 
+            data: [
+                {% for e in column %}
+                {{e/100}},
+                {% endfor %}
+            ]
+        }, 
+        {% endfor %}
+    ]
+});
+{% endif %}
+
+{% if not sub_category_df.empty %}
+Highcharts.chart('sellin-sub-category', {
+    chart: {
+        type: 'column'
+    },
+    title: {
+        text: 'Sellin by Sub-category ({{date_start.strftime("%b %d")}} - {{date_end.strftime("%b %d")}})'
+    },
+    xAxis: {
+        categories: [
+            {% for idx, row in sub_category_df.iterrows() %}
+            '{{idx}}', 
+            {% endfor %}
+        ],
+        crosshair: true
+    },
+    yAxis: {
+        min: 0,
+        title: {
+            text: 'Sellin (EUR)'
+        }
+    },
+    tooltip: {
+        headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
+        pointFormat: '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' +
+            '<td style="padding:0"><b>{point.y:.1f} EUR</b></td></tr>',
+        footerFormat: '</table>',
+        shared: true,
+        useHTML: true
+    },
+    plotOptions: {
+        column: {
+            pointPadding: 0.2,
+            borderWidth: 0
+        }
+    },
+    series: [
+        {% for idx, column in sub_category_df.iteritems() %}
+        {
+            name: "{{idx}}", 
+            data: [
+                {% for e in column %}
+                {{e/100}},
+                {% endfor %}
+            ]
+        }, 
+        {% endfor %}
+    ]
+});
+{% endif %}
+
+{% if not sku_df.empty %}
+var skuRevenueData = [
+        {% for idx, column in sku_df.revenue.iteritems() %}
+        {
+            name: "{{idx}}", 
+            data: [
+                {% for e in column %}
+                {{e/100}},
+                {% endfor %}
+            ]
+        }, 
+        {% endfor %}
+    ]; 
+var skuQtyData = [
+        {% for idx, column in sku_df.qty.iteritems() %}
+        {
+            name: "{{idx}}", 
+            data: [
+                {% for e in column %}
+                {{e}},
+                {% endfor %}
+            ]
+        }, 
+        {% endfor %}
+    ]; 
+// Revenue button action 
+var element = document.getElementById('sellin-sku-revenue');
+$(element).click(function () {
+    skuChart.update({
+        series: skuRevenueData,
+        yAxis: {
+            title: {
+                text: 'Qty'
+            },
+            min: 0
+        },
+    });
+});
+// Qty button action 
+var element = document.getElementById('sellin-sku-qty');
+$(element).click(function () {
+    skuChart.update({
+        series: skuQtyData,
+        yAxis: {
+            title: {
+                text: 'Sellin (EUR)'
+            },
+            min: 0
+        },
+    });
+});
+var skuChart = Highcharts.chart('sellin-sku', {
+    chart: {
+        type: 'column'
+    },
+    title: {
+        text: 'Sellin by SKU ({{date_start.strftime("%b %d")}} - {{date_end.strftime("%b %d")}})'
+    },
+    xAxis: {
+        categories: [
+            {% for idx, row in sku_df.iterrows() %}
+            '{{idx}}', 
+            {% endfor %}
+        ],
+        crosshair: true
+    },
+    yAxis: {
+        min: 0,
+        title: {
+            text: 'Sellin (EUR)'
+        }
+    },
+    tooltip: {
+        headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
+        pointFormat: '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' +
+            '<td style="padding:0"><b>{point.y:.0f}</b></td></tr>',
+        footerFormat: '</table>',
+        shared: true,
+        useHTML: true
+    },
+    plotOptions: {
+        column: {
+            pointPadding: 0.2,
+            borderWidth: 0
+        }
+    },
+    series: skuRevenueData, 
+});
+{% endif %}
+
+</script>
+{% endblock %}

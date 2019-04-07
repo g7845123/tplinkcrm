@@ -1,0 +1,33 @@
+{% extends "template.html" %}
+{% block content %}
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Account Name</th>
+            <th>type</th>
+            <th>Benchmark</th>
+            <th>Amount</th>
+            <th>Gap</th>
+            <th>Manager</th>
+            <th>Detail</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for account_id, row in sellin_df.iterrows() %}
+        <tr>
+            <td>{{row.account}}</td>
+            <td>{{row.type}}</td>
+            <td>{{row.benchmark/100}}</td>
+            <td>{{row.amount/100}}</td>
+            <td>{{row.gap/100}}</td>
+            <td>{{row.manager}}</td>
+            <td><a href="/account/{{account_id}}?start={{report_range[0]}}&end={{report_range[1]}}" target="_blank">Detail</a></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
+
+
+{% block script %}
+{% endblock %}

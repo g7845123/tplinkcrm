@@ -1,0 +1,88 @@
+{% extends "template.html" %}
+
+{% block head %}
+<link href="{{url_for('static', filename='summernote/summernote.css')}}" rel="stylesheet" />
+<!-- Date-Picker Plugin -->
+<link href="{{url_for('static', filename='datepicker/css/bootstrap-datepicker3.css')}}" rel="stylesheet" />
+{% endblock %}
+
+{% block content %}
+<form class="col-md-9" method="POST">
+    <div class="form-group">
+        <label for="subject">Subject</label>
+        <textarea class="form-control" id="subject" name="subject" rows="1">{{task.subject}}</textarea>
+    </div>
+    <div class="form-group">
+        <label for="from">Assigned by</label>
+        <input type="text" class="form-control" id="from" name="from" value="{{task.task_from.email}}" disabled>
+    </div>
+    <div class="form-group">
+        <label for="to">Assign To</label>
+        <input type="text" class="form-control" id="to" name="to" value="{{task.task_to.email}}" disabled>
+    </div>
+    <div class="form-group">
+        <label for="created">Created Time</label>
+        <input type="text" class="form-control" id="created" name="created" value="{{task.created}}" disabled>
+    </div>
+    <div class="form-group">
+        <label for="deadline">Deadline</label>
+        <input type="text" class="form-control" id="deadline" name="deadline" value="{{task.deadline.strftime('%Y-%m-%d')}}">
+    </div>
+    <div class="form-group">
+        <label for="detail">Detail</label>
+        <textarea id="detail" name="detail">{{task.detail}}</textarea>
+    </div>
+    <div class="form-group">
+        <label for="status">Status</label>
+        <input type="text" class="form-control" id="status" name="status" value="{{task.status}}" disabled>
+    </div>
+    <div class="form-group">
+        <div class="checkbox">
+            <label><input type="checkbox" name="email-notification" value="1">Email Notification</label>
+        </div>
+    </div>
+    <button type="submit" name="submit" class="btn btn-primary" value="save">Save</button>
+    <button type="submit" name="submit" class="btn btn-success" value="mark-as-completed">Mark as completed</button>
+    <button type="submit" name="submit" class="btn btn-warning" value="rework-required">Rework required</button>
+    <a href="/task/delete/{{task.id}}" class="btn btn-danger" role="button">Delete</a>
+    <br>
+    <button type="submit" name="submit" class="btn btn-link" value="send-reminder">Click here to send a task reminder by email</button>
+</form>
+{% endblock %}
+
+
+{% block script %}
+<script src="{{url_for('static', filename='summernote/summernote.min.js')}}"></script>
+
+<!-- Date-Picker Plugin -->
+<script src="{{url_for('static', filename='datepicker/js/bootstrap-datepicker.min.js')}}"></script>
+
+<script>
+    $(document).ready(function() {
+        $('#detail').summernote({
+            // height: 150,   //set editable area's height
+            minHeight: 150,  // set minimum height of editor
+            // toolbar
+            toolbar: [
+                ['style', ['style']],
+                ['font', ['bold', 'italic', 'underline', 'clear']],
+                // ['font', ['bold', 'italic', 'underline', 'strikethrough', 'superscript', 'subscript', 'clear']],
+                ['fontname', ['fontname']],
+                ['fontsize', ['fontsize']],
+                ['color', ['color']],
+                ['para', ['ul', 'ol', 'paragraph']],
+                // ['height', ['height']],
+                ['table', ['table']],
+                // ['insert', ['link', 'picture', 'hr']],
+                ['insert', ['link', 'hr']],
+                ['view', ['fullscreen', 'codeview']],
+                ['help', ['help']]
+            ],
+        });
+        $('#deadline').datepicker({
+            format: "yyyy-mm-dd", 
+            autoclose: true, 
+        });
+    });
+</script>
+{% endblock %}

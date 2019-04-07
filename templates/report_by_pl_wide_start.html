@@ -1,0 +1,57 @@
+{% extends "template.html" %}
+{% block head %}
+<link href="{{url_for('static', filename='css/select2.min.css')}}" rel="stylesheet" />
+{% endblock %}
+
+{% block content %}
+    <h2>Report parameter input</h2>
+    <form class="col-md-9" method="GET" action="/report-by-pl-wide/result">
+        <label for="report-range">Date range</label>
+        <div class="input-daterange input-group" id="report-range">
+            <span class="input-group-addon">From</span>
+            <input type="text" class="input-sm form-control" id="start" name="start" value="{{report_range[0].strftime("%Y-%m-%d")}}" />
+            <span class="input-group-addon">to</span>
+            <input type="text" class="input-sm form-control" id="end" name="end" value="{{report_range[1].strftime("%Y-%m-%d")}}" />
+        </div>
+        <label for="account-type">Account type</label>
+        <div class="form-group" id="account-type">
+            {% for type in types %}
+            <label class="checkbox-inline">
+                <input type="checkbox" id="{{type}}" value="{{type}}" name="type">{{type}}
+            </label>
+            {% endfor %}
+        </div>
+        <div class="form-group">
+            <label for="report-type">Report type</label>
+            <div class="radio">
+                <label><input type="radio" name="report-type" value="1">Top pl-wide</label>
+            </div>
+            <div class="radio">
+                <label><input type="radio" name="report-type" value="2">Top pl-wide Decreased</label>
+            </div>
+            <div class="radio">
+                <label><input type="radio" name="report-type" value="3">Top pl-wide Increased</label>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Submit</button>
+    </form>
+{% endblock %}
+
+{% block script %}
+
+<!-- Date-Picker Plugin -->
+<script src="{{url_for('static', filename='datepicker/js/bootstrap-datepicker.min.js')}}"></script>
+
+<script>
+$(document).ready(function() {
+    $('#start').datepicker({
+        format: "yyyy-mm-dd", 
+        autoclose: true, 
+    });
+    $('#end').datepicker({
+        format: "yyyy-mm-dd", 
+        autoclose: true, 
+    });
+});
+</script>
+{% endblock %}

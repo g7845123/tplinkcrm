@@ -1,0 +1,39 @@
+{% extends "template.html" %}
+
+{% block content %}
+<h1 class="page-header">
+    View Stock
+</h1>
+<table class="table table-striped">
+    <thead>
+      <tr>
+        <th>SKU</th>
+        {% for account in accounts %}
+        <th>{{account.name}}</th> 
+        {% endfor %}
+        <th>History</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for sku in skus %}
+      <tr>
+        <td>{{sku}}</td>
+        {% for account in accounts %}
+        <td><span data-toggle="tooltip" title="Update<br>{{stock_data[sku][account.id].date}}" data-content="">{{stock_data[sku][account.id].qty}}</span></td>
+        {% endfor %}
+        <td><a href="/stock/history?sku={{sku}}">History</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}
+
+{% block script%}
+<script>
+$(document).ready(function(){
+    $('[data-toggle="tooltip"]').tooltip({
+        html: true, 
+    });
+});
+</script>
+{% endblock %}

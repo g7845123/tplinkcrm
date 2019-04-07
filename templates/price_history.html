@@ -1,0 +1,65 @@
+{% extends "template.html" %}
+{% block content %}
+    <h1 class="page-header">
+        {{sku}} PriceHistory
+    </h1>
+    <div id="history" style="height: 400px"></div>
+{% endblock %}
+
+
+{% block script %}
+<!-- Resources -->
+<script src="{{url_for('static', filename='highcharts/highcharts.js')}}"></script>
+<script src="{{url_for('static', filename='highcharts/modules/exporting.js')}}"></script>
+
+<!-- Chart code -->
+<script>
+$(function () {
+    Highcharts.chart('history', {
+        chart: {
+            zoomType: 'x', 
+        },
+        title: {
+            text: '{{sku}} Price History'
+        },
+        xAxis: {
+            type: 'datetime',
+            dateTimeLabelFormats: { 
+                day: '%Y-%m-%d',
+                month: '%Y-%m',
+                year: '%Y',
+            },
+            title: {
+                text: 'Time'
+            }
+        },
+        yAxis: {
+            title: {
+                text: 'Price (EUR)'
+            },
+            allowDecimals: false,
+            min: 0
+        },
+        tooltip: {
+            headerFormat: '<b>{series.name}</b><br>',
+            pointFormat: '{point.x:%b %d %H:%M}: {point.y}', 
+            crosshairs: [true,true], 
+        },
+
+        series: [
+            {% for account in accounts %}
+            {
+                name: '{{account}}',
+                data: [
+                    {% for result in result_dict[account] %}
+                      [Date.UTC({{result.time.year}}, {{result.time.month-1}}, {{result.time.day}}, {{result.time.hour}}, {{result.time.minute}}), {{result.price/100}}],
+                    {% endfor %}
+                ], 
+                step: 'left', 
+            }, 
+            {% endfor %}
+        ]
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "template.html" %}
+{% block head %}
+<link href="{{url_for('static', filename='css/select2.min.css')}}" rel="stylesheet" />
+{% endblock %}
+
+{% block content %}
+    <h1 class="page-header">
+        Account Search
+    </h1>
+    <h2>Search Result for "{{account_name}}"</h2>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Account</th>
+                <th>YTD Revenue</th>
+                <th>Type</th>
+                <th>Detail</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for idx, account in account_df.iterrows() %}
+            <tr>
+                <td>{{account.account_name}}</td>
+                <td>{{account.revenue / 100}}</td>
+                <td>{{account.account_type}}</td>
+                <td><a href="/account/{{account.account_id}}?start={{report_range[0]}}&end={{report_range[1]}}">View</a></td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+{% endblock %}
+
+{% block script %}
+{% endblock %}

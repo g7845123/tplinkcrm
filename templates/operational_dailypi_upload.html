@@ -1,0 +1,15 @@
+{% extends 'template.html' %}
+{% block content %}
+
+<h1 class="page-header">
+    Upload Daily PI
+</h1>
+<form class="form-horizontal" action="#" method="POST" enctype="multipart/form-data">
+    <p>Please use the exact <a href="{{url_for('static', filename='download/daily_pi_template.xlsx')}}">template</a> to upload data</p>
+    <p>Important: Date format can be be yyyy-mm-dd, or dd/mm/yyyy, or dd.mm.yyyy</p>
+    <input type="file" class="form-control-file" name="dailypi-file">
+    <br>
+    <button type="submit" value="Upload" class="btn btn-primary" id="submit">Submit</button>
+</form>
+
+{% endblock %}

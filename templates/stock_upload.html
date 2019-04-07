@@ -1,0 +1,176 @@
+{% extends 'template.html' %}
+{% block content %}
+
+<h1 class="page-header">
+    Upload Stock
+</h1>
+
+<form class="form-horizontal" action="#" method="POST" enctype="multipart/form-data">
+    <p>Please use the exact template to upload data. <a href="{{url_for('static', filename='download/stock_template.xlsx')}}">Download Template</a></p>
+    <div class="form-group row">
+        <label for="user-country" class="col-sm-2 col-form-label">Country: </label>
+        <div class="col-sm-10">
+            <input type="text" readonly class="form-control-plaintext" id="user-country" value="{{user.country}}">
+        </div>
+    </div>
+    <div class="form-group row">
+        <label for="stock-file" class="col-sm-2 col-form-label">File: </label>
+        <div class="col-sm-10">
+            <input type="file" class="form-control-file" name="stock-file" id="stock-file">
+        </div>
+    </div>
+    <div id="upload-status"></div>
+    <h2>Header Check</h2>
+    <div id="header-response"></div>
+    <h2>Stock Check</h2>
+    <div id="stock-response"></div>
+    <h2>BO Check</h2>
+    <div id="bo-response"></div>
+    <h2>Date Check</h2>
+    <div id="date-response"></div>
+    <h2>SKU Check</h2>
+    <div id="sku-response"></div>
+    <h2>Distributor Check</h2>
+    <div id="distributor-response"></div>
+    <h2>Duplication Check</h2>
+    <div id="duplication-response"></div>
+    <button type="submit" value="Upload" class="btn btn-primary" id="submit" style="display:none;" onclick="changeSubmissionState()">Submit</button>
+</form>
+
+{% endblock %}
+
+{% block script %}
+<script>
+$('form').submit(function() {
+    $(this).find("button[type='submit']").html('Uploading');
+    $(this).find("button[type='submit']").prop('disabled',true);
+});
+$(document).on('change','#stock-file' , function(){ 
+    $('#upload-status').html('<div class="alert alert-info">Checking uploaded file, please wait</div>');
+    var stockForm = new FormData();
+    stockForm.append('stock-file', $('#stock-file').prop('files')[0]);
+    var stockRequest = new XMLHttpRequest();
+    stockRequest.open("POST", "/stock/upload-check");
+    stockRequest.send(stockForm);
+    stockRequest.onreadystatechange = function() {
+        if(this.readyState == 4 && this.status == 200) {
+            $('#upload-status').html('<div class="alert alert-success">Uploading completed</div>');
+            stockResponse = JSON.parse(stockRequest.response);
+            // Header check
+            if(stockResponse.header == 'pass') {
+                $('#header-response').html('<div class="alert alert-success">Header check - ok</div>');
+                
+            }
+            else if(!stockResponse.header){
+                $('#header-response').text('Please fix the error above to perform header check.');
+            }
+            else {
+                $('#header-response').html('<div class="alert alert-danger">Please include the following columns into submission (Header must be with the exact name)</div>');
+                for (var i in stockResponse.header) {
+                    $('#header-response').append('<div>'+ stockResponse.header[i] +'</div>');
+                }
+                $('#stock-file').val('');
+            }
+            // Stock check
+            if(stockResponse.stock == 'pass') {
+                $('#stock-response').html('<div class="alert alert-success">Qty check - ok</div>');
+            }
+            else if(!stockResponse.stock){
+                $('#stock-response').text('Please fix the error above to perform stock check');
+            }
+            else {
+                $('#stock-response').html('<div class="alert alert-danger">Stock must be number and non-zero. The following lines are invalid</div>');
+                for (var i in stockResponse.stock) {
+                    $('#stock-response').append('<div>Line '+ (parseInt(i)+2) + ': ' + stockResponse.stock[i] +'</div>');
+                }
+                $('#stock-file').val('');
+            }
+            // BO check
+            if(stockResponse.bo == 'pass') {
+                $('#bo-response').html('<div class="alert alert-success">Qty check - ok</div>');
+            }
+            else if(!stockResponse.bo){
+                $('#bo-response').text('Please fix the error above to perform BO check');
+            }
+            else {
+                $('#bo-response').html('<div class="alert alert-danger">BO must be number and non-zero. The following lines are invalid</div>');
+                for (var i in stockResponse.bo) {
+                    $('#bo-response').append('<div>Line '+ (parseInt(i)+2) + ': ' + stockResponse.bo[i] +'</div>');
+                }
+                $('#stock-file').val('');
+            }
+            // Date check
+            if(stockResponse.date == 'pass') {
+                $('#date-response').html('<div class="alert alert-success">Date check - ok</div>');
+            }
+            else if(!stockResponse.date){
+                $('#date-response').text('Please fix the error above to perform date check');
+            }
+            else {
+                $('#date-response').html('<div class="alert alert-danger">Error in parsing date with the following entries. Date must be the format YYYY-mm-dd, e.g. 2019-01-31</div>');
+                for (var i in stockResponse.date) {
+                    $('#date-response').append('<div>Line '+ (parseInt(i)+2) + ': ' + stockResponse.date[i] +'</div>');
+                }
+                $('#stock-file').val('');
+            }
+            // SKU check
+            if(stockResponse.sku == 'pass') {
+                $('#sku-response').html('<div class="alert alert-success">SKU check - ok</div>');
+            }
+            else if(!stockResponse.sku){
+                $('#sku-response').text('Please fix the error above to perform sku check');
+            }
+            else {
+                $('#sku-response').append('<div class="alert alert-danger">The following SKU are not found in the system. Please modify your submission, or contact james.guo@tp-link.com</div>');
+                for (var i in stockResponse.sku) {
+                    $('#sku-response').append('<div>'+ stockResponse.sku[i] +'<div>');
+                }
+                $('#stock-file').val('');
+            }
+            // Distributor check
+            if(stockResponse.distributor == 'pass') {
+                $('#distributor-response').html('<div class="alert alert-success">Distributor name check - ok</div>');
+            }
+            else if(!stockResponse.distributor){
+                $('#distributor-response').text('Please fix the error above to perform distributor name check');
+            }
+            else {
+                $('#distributor-response').html('<div class="alert alert-danger">The following distributors are not found in the system</div>');
+                for (var i in stockResponse.distributor) {
+                    $('#distributor-response').append('<div>'+ stockResponse.distributor[i] +'<div>');
+                }
+                $('#stock-file').val('');
+            }
+            // Duplication check
+            if(stockResponse.duplication == 'pass') {
+                $('#duplication-response').html('<div class="alert alert-success">Duplication check - ok</div>');
+                
+            }
+            else if(!stockResponse.duplication){
+                $('#duplication-response').text('Please fix the error above to perform duplication check.');
+            }
+            else {
+                $('#duplication-response').html('<div class="alert alert-danger">Duplication found for sales data of the following distributors');
+                for (var i in stockResponse.duplication) {
+                    $('#duplication-response').append('<div>'+ stockResponse.duplication[i] +'<div>');
+                }
+                $('#stock-file').val('');
+            }
+            if (
+                stockResponse.header == 'pass' && 
+                stockResponse.stock == 'pass' && 
+                stockResponse.bo == 'pass' && 
+                stockResponse.date == 'pass' && 
+                stockResponse.sku == 'pass' && 
+                stockResponse.distributor == 'pass' && 
+                stockResponse.duplication == 'pass' 
+            ) {
+                $('#submit').show();
+            }
+        } else {
+            $('#upload-status').html('Error in submitting, please retry. If the problem exists, please contact james.guo@tp-link.com');
+        }
+    } // stockRequest.onreadystatechange
+}); // On change
+</script>
+{% endblock %}

@@ -1,0 +1,131 @@
+{% extends "template.html" %}
+{% block content %}
+    <h1 class="page-header">
+        {{account_name}} Sellout YOY
+    </h1>
+    {% for sku in skus %}
+    <h2>
+        {{account_name}} {{sku}} Sellout
+    </h2>
+    <label class="radio-inline"><input type="radio" name="{{sku}}-optradio" checked="checked" id="{{sku}}-revenue">Revenue</label>
+    <label class="radio-inline"><input type="radio" name="{{sku}}-optradio" id="{{sku}}-qty">Qty</label>
+    <div id="{{sku}}" style="height: 400px"></div>
+    {% endfor %}
+{% endblock %}
+
+
+{% block script %}
+<!-- Resources -->
+<script src="{{url_for('static', filename='highcharts/highcharts.js')}}"></script>
+<script src="{{url_for('static', filename='highcharts/modules/exporting.js')}}"></script>
+
+<!-- Chart code -->
+<script>
+{% for sku in skus %}
+
+$(function () {
+    var revenueData = [
+        {% for year in years %}
+        {
+            name: '{{year}}',
+            data: [
+                {% for idx, result in result_dict[sku][year].iterrows() %}
+                  [Date.UTC({{base_year}}, {{result.date.month-1}}, {{result.date.day}}), {{result.total/100}}],
+                {% endfor %}
+            ]
+        }, 
+        {% endfor %}
+    ]
+
+    var qtyData = [
+        {% for year in years %}
+        {
+            name: '{{year}}',
+            data: [
+                {% for idx, result in result_dict[sku][year].iterrows() %}
+                  [Date.UTC({{base_year}}, {{result.date.month-1}}, {{result.date.day}}), {{result.sellout}}],
+                {% endfor %}
+            ]
+        }, 
+        {% endfor %}
+    ]
+    var chart = Highcharts.chart('{{sku}}', {
+        chart: {
+            type: 'spline', 
+            zoomType: 'x', 
+        },
+        title: {
+            text: '{{account_name}} {{sku}} Sellout by Revenue'
+        },
+        xAxis: {
+            type: 'datetime',
+            dateTimeLabelFormats: { 
+                day: '%b %e',
+                month: '%b %e',
+                year: '%b', // don't display the dummy year
+            },
+            title: {
+                text: 'Date'
+            }
+        },
+        yAxis: {
+            title: {
+                text: 'Sellout (EUR)'
+            },
+            allowDecimals: false,
+            min: 0
+        },
+        tooltip: {
+            headerFormat: '<b>{series.name}</b><br>',
+            pointFormat: '{point.x:%b %e}: {point.y}', 
+            crosshairs: [true,true], 
+        },
+
+        plotOptions: {
+            spline: {
+                marker: {
+                    enabled: true
+                }
+            }
+        },
+
+        series: revenueData, 
+    });
+    // the button action
+    var element = document.getElementById('{{sku}}-revenue');
+    $(element).click(function () {
+        chart.update({
+            series: revenueData,
+            title: {
+                text: '{{account_name}} {{sku}} Sellout by Revenue'
+            },
+            yAxis: {
+                title: {
+                    text: 'Sellout (EUR)'
+                },
+                allowDecimals: false,
+                min: 0
+            },
+        });
+    });
+    // the button action
+    var element = document.getElementById('{{sku}}-qty');
+    $(element).click(function () {
+        chart.update({
+            series: qtyData,
+            title: {
+                text: '{{account_name}} {{sku}} Sellout by Qty'
+            },
+            yAxis: {
+                title: {
+                    text: 'Qty'
+                },
+                allowDecimals: false,
+                min: 0
+            },
+        });
+    });
+});
+{% endfor %}
+</script>
+{% endblock %}

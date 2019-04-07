@@ -1,0 +1,83 @@
+{% extends "template.html" %}
+{% block content %}
+    <h1 class="page-header">
+        {{account_name}} Sellout YOY
+    </h1>
+    {% for pl_wide in pl_wides %}
+    <h2>
+        {{account_name}} {{pl_wide}} Sellout <a href="/pl-wide/{{pl_wide}}-yoy?account={{account_id}}&category={{category}}" target="_blank" class="btn btn-primary">Details</a>
+    </h2>
+    <div id="{{pl_wide}}" style="height: 400px"></div>
+    {% endfor %}
+{% endblock %}
+
+
+{% block script %}
+<!-- Resources -->
+<script src="{{url_for('static', filename='highcharts/highcharts.js')}}"></script>
+<script src="{{url_for('static', filename='highcharts/modules/exporting.js')}}"></script>
+
+<!-- Chart code -->
+<script>
+{% for pl_wide in pl_wides %}
+    $(function () {
+        Highcharts.chart('{{pl_wide}}', {
+            chart: {
+                type: 'spline', 
+                zoomType: 'x', 
+            },
+            title: {
+                text: '{{account_name}} {{pl_wide}} Sellout by Revenue'
+            },
+            xAxis: {
+                type: 'datetime',
+                dateTimeLabelFormats: { 
+                    day: '%b %e',
+                    month: '%b %e',
+                    year: '%b', // don't display the dummy year
+                },
+                title: {
+                    text: 'Date'
+                }
+            },
+            yAxis: {
+                title: {
+                    text: 'Sellout (EUR)'
+                },
+                allowDecimals: false,
+                min: 0
+            },
+            tooltip: {
+                headerFormat: '<b>{series.name}</b><br>',
+                pointFormat: '{point.x:%b %e}: {point.y}', 
+                crosshairs: [true,true], 
+            },
+
+            plotOptions: {
+                spline: {
+                    marker: {
+                        enabled: true
+                    }
+                }
+            },
+
+            series: [
+                {% for year in years %}
+                {
+                    name: '{{year}}',
+                    // Define the data points. All series have a dummy year
+                    // of 1970/71 in order to be compared on the same x axis. Note
+                    // that in JavaScript, months start at 0 for January, 1 for February etc.
+                    data: [
+                        {% for idx, result in result_dict[pl_wide][year].iterrows() %}
+                          [Date.UTC({{base_year}}, {{result.date.month-1}}, {{result.date.day}}), {{result.total/100}}],
+                        {% endfor %}
+                    ]
+                }, 
+                {% endfor %}
+            ]
+        });
+    });
+{% endfor %}
+</script>
+{% endblock %}

@@ -1,0 +1,55 @@
+{% extends "template.html" %}
+{% block head %}
+<link href="{{url_for('static', filename='css/select2.min.css')}}" rel="stylesheet" />
+{% endblock %}
+
+{% block content %}
+    <div class="alert alert-danger" role="alert">
+        <strong>Warning!</strong> This action can't be undone. 
+    </div>
+    <h2>Data by Sellout</h2>
+    <form class="col-md-9" method="POST" action="/account/merge">
+        <div class="form-group">
+            <label for="main-account">Select the main account</label>
+            <select id="main-account" name="main-account" class="select-account">
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="account-to-merge">Select an account to merge</label>
+            <select id="account-to-merge" name="account-to-merge" class="select-account">
+            </select>
+        </div>
+        <center>
+            <button type="submit" class="btn btn-primary" id="submit">Submit</button>
+        </center>
+    </form>
+{% endblock %}
+
+{% block script %}
+<!-- Resources -->
+<script src="{{url_for('static', filename='js/select2.min.js')}}"></script>
+
+<script>
+var select2 = $(".select-account").select2({
+    placeholder: "Select an account",
+    width: '50%', 
+    ajax: {
+        url: "/account/query",
+        dataType: 'json',
+        delay: 250,
+        data: function (params) {
+            var query = {
+                name: params.term,
+            }
+            // Query paramters will be ?name=[term]
+            return query;
+        }, 
+        processResults: function (data) {
+            return {
+                results: data
+            }
+        }, 
+    },
+});
+</script>
+{% endblock %}

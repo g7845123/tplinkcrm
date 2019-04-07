@@ -1,0 +1,129 @@
+{% extends "template.html" %}
+
+{% block head %}
+{% endblock %}
+
+{% block content %}
+    <h1 class="page-header">
+         Sellin Dashboard 
+    </h1>
+
+    <h2>Revenue YoY (Benchmark: {{progress_benchmark}})</h2>
+    {% if not progress_df.empty %}
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th></th>
+                <th>{{this_year-1}}</th>
+                <th>{{this_year}}</th>
+                <th>Growth</th>
+                <th>YoY</th>
+                <th>Detail</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for idx, row in progress_df.iterrows() %}
+            <tr>
+                <td>{{idx.upper()}}</td>
+                <td>{{row[this_year-1]}}</td>
+                <td>{{row[this_year]}}</td>
+                <td>{{row['gap']}}</td>
+                <td>{{row['progress']}}</td>
+                <td><a href="/sellin-by-channel?channel={{idx}}" target="_blank">Detail</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div>No data available</div>
+    {% endif %}
+
+    <h2>View by Month</h2>
+    {% if not monthview_df.empty %}
+    <div id="sellin-by-month" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Month</th>
+                {% for column in monthview_df.columns %}
+                <th>{{column}}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for idx, row in monthview_df.iterrows() %}
+            <tr>
+                <td>{{idx}}</td>
+                {% for column in monthview_df.columns %}
+                <td>{{row[column]/100}}</td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div>No data available</div>
+    {% endif %}
+
+{% endblock %}
+
+{% block script %}
+<script src="{{url_for('static', filename='highcharts/highcharts.js')}}"></script>
+<script src="{{url_for('static', filename='highcharts/modules/exporting.js')}}"></script>
+
+<script>
+
+{% if not monthview_df.empty %}
+Highcharts.chart('sellin-by-month', {
+    chart: {
+        type: 'column'
+    },
+    title: {
+        text: 'Sellin by Month'
+    },
+    xAxis: {
+        categories: [
+            {% for idx, column in monthview_df.iteritems() %}
+            '{{idx}}', 
+            {% endfor %}
+        ],
+        crosshair: true
+    },
+    yAxis: {
+        min: 0,
+        title: {
+            text: 'Sellin (EUR)'
+        }
+    },
+    tooltip: {
+        headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
+        pointFormat: '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' +
+            '<td style="padding:0"><b>{point.y:.1f} EUR</b></td></tr>',
+        footerFormat: '</table>',
+        shared: true,
+        useHTML: true
+    },
+    plotOptions: {
+        column: {
+            pointPadding: 0.2,
+            borderWidth: 0
+        }
+    },
+    series: [
+        {% for idx, column in monthview_df.drop(columns=['Total']).iterrows() %}
+        {
+            name: "{{idx}}", 
+            data: [
+                {% for e in column %}
+                {{e/100}},
+                {% endfor %}
+            ]
+        }, 
+        {% endfor %}
+    ]
+});
+{% endif %}
+
+
+</script>
+{% endblock %}

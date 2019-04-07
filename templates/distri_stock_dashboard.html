@@ -1,0 +1,39 @@
+{% extends "template.html" %}
+{% block head %}
+<link href="{{url_for('static', filename='css/select2.min.css')}}" rel="stylesheet" />
+{% endblock %}
+
+{% block content %}
+    <h2>Distributor Stock Dashboard</h2>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Distributor</th>
+                <th>Last Update</th>
+                <th>Stock</th>
+                <th>BO</th>
+                <th>Weekly Sales</th>
+                <th>WOC</th>
+                <th>WOC (with BO)</th>
+                <th>Detail</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for idx, row in result_df.iterrows() %}
+            <tr>
+                <td>{{row['account']}}</td>
+                <td>{{row['date']}}</td>
+                <td>{{row['stock']/100}}</td>
+                <td>{{row['bo']/100}}</td>
+                <td>{{'%0.2f' % (row['sellin']/100/8)}}</td>
+                <td>{{'%0.2f' % row['woc']}}</td>
+                <td>{{'%0.2f' % row['woc_with_bo']}}</td>
+                <td><a href="/stock/{{idx}}?woc-target=6">Detail</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
+
+{% block script %}
+{% endblock %}

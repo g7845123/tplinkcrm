@@ -1,0 +1,219 @@
+{% extends 'template.html' %}
+{% block content %}
+
+<h1 class="page-header">
+    Upload sellin
+</h1>
+
+<form class="form-horizontal" action="#" method="POST" enctype="multipart/form-data">
+    <p>Please use the exact template to upload data. <a href="{{url_for('static', filename='download/sellin_template.xlsx')}}">Download Template</a></p>
+    <div class="form-group row">
+        <label for="user-country" class="col-sm-2 col-form-label">Country: </label>
+        <div class="col-sm-10">
+            <input type="text" readonly class="form-control-plaintext" id="user-country" value="{{user.country}}">
+        </div>
+    </div>
+    <div class="form-group row">
+        <label for="sellin-file" class="col-sm-2 col-form-label">File: </label>
+        <div class="col-sm-10">
+            <input type="file" class="form-control-file" name="sellin-file" id="sellin-file">
+        </div>
+    </div>
+    <div id="upload-status"></div>
+    <h2>Header Check</h2>
+    <div id="header-response"></div>
+    <h2>Unit Price Check</h2>
+    <div id="price-response"></div>
+    <h2>Qty Check</h2>
+    <div id="qty-response"></div>
+    <h2>Date Check</h2>
+    <div id="date-response"></div>
+    <h2>SKU Check</h2>
+    <div id="sku-response"></div>
+    <h2>Distributor Check</h2>
+    <div id="distributor-response"></div>
+    <h2>Customer Check</h2>
+    <div id="customer-response"></div>
+    <h2>Duplication Check</h2>
+    <div id="duplication-response"></div>
+    <button type="submit" value="Upload" class="btn btn-primary" id="submit" style="display:none;" onclick="changeSubmissionState()">Submit</button>
+</form>
+
+{% endblock %}
+
+{% block script %}
+<script>
+$('form').submit(function() {
+    $(this).find("button[type='submit']").html('Uploading');
+    $(this).find("button[type='submit']").prop('disabled',true);
+});
+$(document).on('change','#sellin-file' , function(){ 
+    $('#upload-status').html('<div class="alert alert-info">Checking uploaded file, please wait</div>');
+    var sellinForm = new FormData();
+    sellinForm.append('sellin-file', $('#sellin-file').prop('files')[0]);
+    var sellinRequest = new XMLHttpRequest();
+    sellinRequest.open("POST", "/sellin/upload-check");
+    sellinRequest.send(sellinForm);
+    sellinRequest.onreadystatechange = function() {
+        if(this.readyState == 4 && this.status == 200) {
+            $('#upload-status').html('<div class="alert alert-success">Uploading completed</div>');
+            sellinResponse = JSON.parse(sellinRequest.response);
+            // Header check
+            if(sellinResponse.header == 'pass') {
+                $('#header-response').html('<div class="alert alert-success">Header check - ok</div>');
+                
+            }
+            else if(!sellinResponse.header){
+                $('#header-response').text('Please fix the error above to perform header check.');
+            }
+            else {
+                $('#header-response').html('<div class="alert alert-danger">Please include the following columns into submission (Header must be with the exact name)</div>');
+                for (var i in sellinResponse.header) {
+                    $('#header-response').append('<div>'+ sellinResponse.header[i] +'</div>');
+                }
+                $('#sellin-file').val('');
+            }
+            // Unit price check
+            if(sellinResponse.unit_price == 'pass') {
+                $('#price-response').html('<div class="alert alert-success">Unit Price check - ok</div>');
+            }
+            else if(!sellinResponse.unit_price){
+                $('#price-response').text('Please fix the error above to perform unit price check');
+            }
+            else {
+                $('#price-response').html('<div class="alert alert-danger">Unit Price must be number and non-negative. The following lines are invalid</div>');
+                for (var i in sellinResponse.unit_price) {
+                    $('#price-response').append('<div>Line '+ (parseInt(i)+2) + ': ' + sellinResponse.unit_price[i] +'</div>');
+                }
+                $('#sellin-file').val('');
+            }
+            // Qty check
+            if(sellinResponse.qty == 'pass') {
+                $('#qty-response').html('<div class="alert alert-success">Qty check - ok</div>');
+            }
+            else if(!sellinResponse.qty){
+                $('#qty-response').text('Please fix the error above to perform qty check');
+            }
+            else {
+                $('#qty-response').html('<div class="alert alert-danger">Qty must be number and non-zero. The following lines are invalid</div>');
+                for (var i in sellinResponse.qty) {
+                    $('#qty-response').append('<div>Line '+ (parseInt(i)+2) + ': ' + sellinResponse.qty[i] +'</div>');
+                }
+                $('#sellin-file').val('');
+            }
+            // Date check
+            if(sellinResponse.date == 'pass') {
+                $('#date-response').html('<div class="alert alert-success">Date check - ok</div>');
+            }
+            else if(!sellinResponse.date){
+                $('#date-response').text('Please fix the error above to perform date check');
+            }
+            else {
+                $('#date-response').html('<div class="alert alert-danger">Error in parsing date with the following entries. Date must be the format YYYY-mm-dd, e.g. 2019-01-31</div>');
+                for (var i in sellinResponse.date) {
+                    $('#date-response').append('<div>Line '+ (parseInt(i)+2) + ': ' + sellinResponse.date[i] +'</div>');
+                }
+                $('#sellin-file').val('');
+            }
+            // SKU check
+            if(sellinResponse.sku == 'pass') {
+                $('#sku-response').html('<div class="alert alert-success">SKU check - ok</div>');
+            }
+            else if(!sellinResponse.sku){
+                $('#sku-response').text('Please fix the error above to perform sku check');
+            }
+            else {
+                $('#sku-response').append('<div class="alert alert-danger">The following SKU are not found in the system. Please modify your submission, or contact james.guo@tp-link.com</div>');
+                for (var i in sellinResponse.sku) {
+                    $('#sku-response').append('<div>'+ sellinResponse.sku[i] +'<div>');
+                }
+                $('#sellin-file').val('');
+            }
+            // Distributor check
+            if(sellinResponse.distributor == 'pass') {
+                $('#distributor-response').html('<div class="alert alert-success">Distributor name check - ok</div>');
+            }
+            else if(!sellinResponse.distributor){
+                $('#distributor-response').text('Please fix the error above to perform distributor name check');
+            }
+            else {
+                $('#distributor-response').html('<div class="alert alert-danger">The following distributors are not found in the system</div>');
+                for (var i in sellinResponse.distributor) {
+                    $('#distributor-response').append('<div>'+ sellinResponse.distributor[i] +'<div>');
+                }
+                $('#sellin-file').val('');
+            }
+            // Customer check
+            if(sellinResponse.customer == 'pass') {
+                $('#customer-response').html('<div class="alert alert-success">Customer name check - ok</div>');
+            }
+            else if(!sellinResponse.customer){
+                $('#customer-response').text('Please fix the error above to perform custoemr name check');
+            }
+            else {
+                $('#customer-response').html('<div class="alert alert-danger">The following customers are not found in the system</div>');
+                for (var i in sellinResponse.customer) {
+                    $('#customer-response').append('<div>'+ sellinResponse.customer[i] +'<div>');
+                }
+                $('#customer-response').append('<div>If you want to add them into the system, please click button below</div>');
+                var addCustomerBtn = $('<button class="btn btn-primary" type="button">Confirm To Add</button>').click(function () { 
+                    addCustomerBtn.prop("disabled", true);
+                    addCustomerBtn.text("Uploading");
+                    var customerForm = new FormData();
+                    customerForm.append('unmapped-customer', JSON.stringify(sellinResponse.customer));
+                    var customerRequest = new XMLHttpRequest();
+                    customerRequest.open("POST", "/account/upload");
+                    customerRequest.send(customerForm);
+                    customerRequest.onreadystatechange = function() {
+                        if(this.readyState == 4 && this.status == 200) {
+                            var customerResponse = customerRequest.response;
+                            if(customerResponse == 'pass') {
+                                location.reload()
+                            }
+                            else {
+                                $('#customer-response').html('<div class="alert alert-danger">Error, please contact james.guo@tp-link.com</div>');
+                            
+                            }
+                        }
+                        else {
+                            $('#customer-response').text('Adding new customers, please wait');
+                        }
+                    };
+                }); // addCustomerBtn click
+                $('#customer-response').append(addCustomerBtn);
+                $('#sellin-file').val('');
+            } // sellinResponse.customer check failed
+            // Duplication check
+            if(sellinResponse.duplication == 'pass') {
+                $('#duplication-response').html('<div class="alert alert-success">Duplication check - ok</div>');
+                
+            }
+            else if(!sellinResponse.duplication){
+                $('#duplication-response').text('Please fix the error above to perform duplication check.');
+            }
+            else {
+                $('#duplication-response').html('<div class="alert alert-danger">Duplication found for sales data of the following distributors');
+                for (var i in sellinResponse.duplication) {
+                    $('#duplication-response').append('<div>'+ sellinResponse.duplication[i] +'<div>');
+                }
+                $('#sellin-file').val('');
+            }
+            if (
+                sellinResponse.header == 'pass' && 
+                sellinResponse.unit_price == 'pass' && 
+                sellinResponse.qty == 'pass' && 
+                sellinResponse.date == 'pass' && 
+                sellinResponse.sku == 'pass' && 
+                sellinResponse.distributor == 'pass' && 
+                sellinResponse.customer == 'pass' &&
+                sellinResponse.duplication == 'pass' 
+            ) {
+                $('#submit').show();
+            }
+        } else {
+            $('#upload-status').html('Error in submitting, please retry. If the problem exists, please contact james.guo@tp-link.com');
+        }
+    } // sellinRequest.onreadystatechange
+}); // On change
+</script>
+{% endblock %}

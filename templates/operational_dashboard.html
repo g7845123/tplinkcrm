@@ -1,0 +1,142 @@
+{% extends 'template.html' %}
+{% block content %}
+
+<h1 class="page-header">
+    Operational Dashboard
+</h1>
+<h2>
+    Data Upload
+</h2>
+<p>To upload PL status, click <a href="/operational/pl-upload">here</a>. To upload Daily PI, click <a href="/operational/dailypi-upload">here</a>. To upload invoice status, click <a href="/operational/invoice-upload">here</a>
+
+{% if urgent_pls %}
+<h2>
+    Urgent Packing List
+</h2>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>PL Date</th>
+            <th>Customer</th>
+            <th>PI</th>
+            <th>SO</th>
+            <th>Promised Date</th>
+            <th>Ready Date</th>
+            <th>Truck ID</th>
+            <th>Required Date</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for urgent_pl in urgent_pls %}
+        <tr>
+            <td>{{urgent_pl['pl_date']}}</td>
+            <td>{{urgent_pl['customer']}}</td>
+            <td>{{urgent_pl['pi']}}</td>
+            <td>{{urgent_pl['so']}}</td>
+            <td>{{urgent_pl['promised_date']}}</td>
+            <td>{{urgent_pl['ready_date']}}</td>
+            <td>{{urgent_pl['truck_id']}}</td>
+            {% if urgent_pl['required_date'] %}
+            <td>{{urgent_pl['required_date'].strftime('%Y-%m-%d')}}</td>
+            {% else %}
+            <td></td>
+            {% endif %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+<h2>
+    Open Packing List
+</h2>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Customer</th>
+            <th>PI</th>
+            <th>SO</th>
+            <th>PL Date</th>
+            <th>Promised Date</th>
+            <th>Ready Date</th>
+            <th>Truck ID</th>
+            <th>Required Date</th>
+            <th>Shipped Date</th>
+            <th>Invoice Date</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for open_pl in open_pls %}
+        <tr>
+            <td>{{open_pl['customer']}}</td>
+            <td>{{open_pl['pi']}}</td>
+            <td>{{open_pl['so']}}</td>
+            <td>{{open_pl['pl_date']}}</td>
+            <td>{{open_pl['promised_date']}}</td>
+            <td>{{open_pl['ready_date']}}</td>
+            <td>{{open_pl['truck_id']}}</td>
+            {% if open_pl['required_date'] %}
+            <td>{{open_pl['required_date'].strftime('%Y-%m-%d')}}</td>
+            {% else %}
+            <td></td>
+            {% endif %}
+            {% if open_pl['shipped_date'] %}
+            <td>{{open_pl['shipped_date'].strftime('%Y-%m-%d')}}</td>
+            {% else %}
+            <td></td>
+            {% endif %}
+            <td>{{open_pl['invoice_date']}}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<h2>
+    Closed Packing List
+</h2>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Customer</th>
+            <th>PI</th>
+            <th>SO</th>
+            <th>PL Date</th>
+            <th>Promised Date</th>
+            <th>Ready Date</th>
+            <th>Truck ID</th>
+            <th>Tracking ID</th>
+            <th>Required Date</th>
+            <th>Shipped Date</th>
+            <th>Invoice Date</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for closed_pl in closed_pls %}
+        <tr>
+            <td>{{closed_pl['customer']}}</td>
+            <td>{{closed_pl['pi']}}</td>
+            <td>{{closed_pl['so']}}</td>
+            <td>{{closed_pl['pl_date']}}</td>
+            <td>{{closed_pl['promised_date']}}</td>
+            <td>{{closed_pl['ready_date']}}</td>
+            <td>{{closed_pl['truck_id']}}</td>
+            <td>{{closed_pl['pl_name']}}</td>
+            {% if closed_pl['required_date'] %}
+            <td>{{closed_pl['required_date'].strftime('%Y-%m-%d')}}</td>
+            {% else %}
+            <td></td>
+            {% endif %}
+            {% if closed_pl['shipped_date'] %}
+            <td>{{closed_pl['shipped_date'].strftime('%Y-%m-%d')}}</td>
+            {% else %}
+            <td></td>
+            {% endif %}
+            {% if closed_pl['invoice_date'] %}
+            <td>{{closed_pl['invoice_date'].strftime('%Y-%m-%d')}}</td>
+            {% else %}
+            <td></td>
+            {% endif %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}

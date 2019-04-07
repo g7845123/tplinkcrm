@@ -1,0 +1,120 @@
+{% extends "template.html" %}
+
+{% block head %}
+<!-- Select2 Resources -->
+<link href="{{url_for('static', filename='css/select2.min.css')}}" rel="stylesheet" />
+<link href="{{url_for('static', filename='summernote/summernote.css')}}" rel="stylesheet" />
+<!-- Date-Picker Plugin -->
+<link href="{{url_for('static', filename='datepicker/css/bootstrap-datepicker3.css')}}" rel="stylesheet" />
+{% endblock %}
+
+{% block content %}
+<form class="col-md-9" method="POST">
+    <div class="form-group">
+        <label for="subject">Subject</label>
+        <textarea class="form-control" id="subject" name="subject" rows="1" disabled>{{task.subject}}</textarea>
+    </div>
+    <div class="form-group">
+        <label for="from">Assigned by</label>
+        <input type="text" class="form-control" id="from" name="from" value="{{task.task_from.email}}" disabled>
+    </div>
+    <div class="form-group">
+        <label for="to">Assign To</label>
+        <input type="text" class="form-control" id="to" name="to" value="{{task.task_to.email}}" disabled>
+    </div>
+    <div class="form-group">
+        <label for="created">Created Time</label>
+        <input type="text" class="form-control" id="created" name="created" value="{{task.created}}" disabled>
+    </div>
+    <div class="form-group">
+        <label for="deadline">Deadline</label>
+        <input type="text" class="form-control" id="deadline" name="deadline" value="{{task.deadline.strftime('%Y-%m-%d')}}" disabled>
+    </div>
+    <div class="form-group">
+        <label for="detail">Detail</label>
+        <textarea id="detail" name="detail">{{task.detail}}</textarea>
+    </div>
+    <div class="form-group">
+        <label for="status">Status</label>
+        <select id="status" name="status" style="width: 100%">
+            <option value="To Do" {% if task.status == "To Do" %}selected{% endif %}>To Do</option>
+            <option value="Doing" {% if task.status == "Doing" %}selected{% endif %}>Doing</option>
+            <option value="Pending" {% if task.status == "Pending" %}selected{% endif %}>Pending</option>
+            <option value="Completed"{% if task.status == "Completed" %}selected{% endif %}>Completed</option>
+        </select>
+    </div>
+    <!-- Button trigger modal -->
+    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#confirmation-modal">Save Changes</button>
+    <!-- Modal -->
+    <div class="modal fade" id="confirmation-modal" tabindex="-1" role="dialog" aria-labelledby="confirmation-modal">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="myModalLabel">Save changes</h4>
+            </div>
+            <div class="modal-body">
+                <div>Would you send an email to notify the task owner? (Note: An email has to be sent if the status is "Completed")</div>
+            <div class="modal-footer">
+                <button type="submit" name="submit" class="btn btn-success" id="save-without-email" value="save-without-email">Save but don't send email</button>
+                <button type="submit" name="submit" class="btn btn-danger" value="save-with-email">Save and send email</button>
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+    </div>
+  </div>
+</div>
+</form>
+{% endblock %}
+
+
+{% block script %}
+<script src="{{url_for('static', filename='summernote/summernote.min.js')}}"></script>
+
+<!-- Select2 Resources -->
+<script src="{{url_for('static', filename='js/select2.min.js')}}"></script>
+<script src="{{url_for('static', filename='summernote/summernote.min.js')}}"></script>
+
+<!-- Date-Picker Plugin -->
+<script src="{{url_for('static', filename='datepicker/js/bootstrap-datepicker.min.js')}}"></script>
+
+<script>
+    $(document).ready(function() {
+        // Select2
+        $("#status").select2();
+        $('#detail').summernote({
+            // height: 150,   //set editable area's height
+            minHeight: 150,  // set minimum height of editor
+            // toolbar
+            toolbar: [
+                ['style', ['style']],
+                ['font', ['bold', 'italic', 'underline', 'clear']],
+                // ['font', ['bold', 'italic', 'underline', 'strikethrough', 'superscript', 'subscript', 'clear']],
+                ['fontname', ['fontname']],
+                ['fontsize', ['fontsize']],
+                ['color', ['color']],
+                ['para', ['ul', 'ol', 'paragraph']],
+                // ['height', ['height']],
+                ['table', ['table']],
+                // ['insert', ['link', 'picture', 'hr']],
+                ['insert', ['link', 'hr']],
+                ['view', ['fullscreen', 'codeview']],
+                ['help', ['help']]
+            ],
+        });
+        $('#deadline').datepicker({
+            format: "yyyy-mm-dd", 
+            autoclose: true, 
+        });
+        $("#status").change(function () {
+            if($("#status").val()=="Completed")
+            {
+                $("#save-without-email").prop('disabled', true);
+            }
+            else
+            {
+                $("#save-without-email").prop('disabled', false);
+            }
+        });
+    });
+</script>
+{% endblock %}

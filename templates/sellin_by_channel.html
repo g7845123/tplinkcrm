@@ -1,0 +1,43 @@
+{% extends "template.html" %}
+
+{% block head %}
+{% endblock %}
+
+{% block content %}
+    <h1 class="page-header">
+        {{channel}} Sellin 
+    </h1>
+
+    <h2>Sales Progress (Benchmark: {{progress_benchmark}})</h2>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Account</th>
+                <th>{{report_range[1].year-1}}</th>
+                <th>{{report_range[1].year}}</th>
+                <th>Gap</th>
+                <th>YoY</th>
+                <th>Detail</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for idx, row in progress_df.iterrows() %}
+            <tr>
+                <td>{{row.account_name}}</td>
+                <td>{{row[report_range[1].year-1]}}</td>
+                <td>{{row[report_range[1].year]}}</td>
+                <td>{{row.gap}}</td>
+                <td>{{row.progress}}</td>
+                <td><a href="/account/{{row.account_id}}?start={{report_range[0]}}&end={{report_range[1]}}" target="_blank">Detail</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+{% endblock %}
+
+{% block script %}
+<script src="{{url_for('static', filename='highcharts/highcharts.js')}}"></script>
+<script src="{{url_for('static', filename='highcharts/modules/exporting.js')}}"></script>
+
+{% endblock %}

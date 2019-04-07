@@ -1,0 +1,64 @@
+{% extends "template.html" %}
+
+{% block head %}
+<link href="{{url_for('static', filename='summernote/summernote.css')}}" rel="stylesheet" />
+{% endblock %}
+
+{% block content %}
+    <h1 class="page-header">
+        View Accounts of {{manager.name}}
+    </h1>
+    <h2>Overview (YoY {{"{percent:.2%}".format(percent=revenue_dict['sum'].get(years[-1], default=0)/revenue_dict['sum'].get(years[-2], default=0)-1)}})</h2>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Year</th>
+                {% for column in sellin_dict['sum'].columns %}
+                <th>{{column}}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for idx, row in sellin_dict['sum'].iterrows() %}
+            <tr>
+                <td>{{idx}}</td>
+                {% for column in sellin_dict['sum'].columns %}
+                <td>{{row[column]/100}}</td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% for account in accounts %}
+    {% set r1 = revenue_dict[account.id].get(years[-1], default=0) %}
+    {% set r2 = revenue_dict[account.id].get(years[-2], default=0) %}
+    {% if r2 != 0 %}
+    <h2>{{account.name}} (YoY {{"{percent:.2%}".format(percent=r1/r2-1)}})<a href="/account/{{account.id}}?start={{report_range[0].strftime('%Y-%m-%d')}}&end={{report_range[1].strftime('%Y-%m-%d')}}" class="btn btn-primary" target="_blank">Detail</a></h2>
+    {% else %}
+    <h2>{{account.name}} (YoY Inf)<a href="/account/{{account.id}}?start={{report_range[0].strftime('%Y-%m-%d')}}&end={{report_range[1].strftime('%Y-%m-%d')}}" class="btn btn-primary" target="_blank">Detail</a></h2>
+    {% endif %}
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Year</th>
+                {% for column in sellin_dict[account.id].columns %}
+                <th>{{column}}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for idx, row in sellin_dict[account.id].iterrows() %}
+            <tr>
+                <td>{{idx}}</td>
+                {% for column in sellin_dict[account.id].columns %}
+                <td>{{row[column]/100}}</td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endfor %}
+{% endblock %}
+
+{% block script %}
+{% endblock %}

@@ -1,0 +1,139 @@
+{% extends "template.html" %}
+{% block content %}
+    <h1 class="page-header">
+        Sellout by Account
+    </h1>
+    <h2>
+        Sellout Overview
+    </h2>
+    <div id="Overview" style="height: 400px"></div>
+    {% for category in categories %}
+    <h2>
+        {{category}} Sellout <a href="/category/{{category}}" target="_blank" class="btn btn-primary">Details</a>
+    </h2>
+    <div id="{{category}}" style="height: 400px"></div>
+    {% endfor %}
+{% endblock %}
+
+
+{% block script %}
+<!-- Resources -->
+<script src="{{url_for('static', filename='highcharts/highcharts.js')}}"></script>
+<script src="{{url_for('static', filename='highcharts/modules/exporting.js')}}"></script>
+
+<!-- Line chart Overview -->
+<script>
+$(function () {
+    Highcharts.chart('Overview', {
+        chart: {
+            type: 'spline', 
+            zoomType: 'x', 
+        },
+        title: {
+            text: 'Sellout Overview (by Revenue)'
+        },
+        xAxis: {
+            type: 'datetime',
+            dateTimeLabelFormats: { 
+                day: '%Y-%m-%d',
+                month: '%Y-%m',
+                year: '%Y',
+            },
+            title: {
+                text: 'Date'
+            }
+        },
+        yAxis: {
+            title: {
+                text: 'Sellout (EUR)'
+            },
+            allowDecimals: false,
+            min: 0
+        },
+        tooltip: {
+            headerFormat: '<b>{series.name}</b><br>',
+            pointFormat: '{point.x:%Y-%m-%d}: {point.y}', 
+            crosshairs: [true,true], 
+        },
+
+        plotOptions: {
+            spline: {
+                marker: {
+                    enabled: true
+                }
+            }
+        },
+
+        series: [
+            {% for account in accounts %}
+            {
+                name: '{{account}}',
+                data: [
+                    {% for idx, result in result_dict['Overview'][account].iterrows() %}
+                      [Date.UTC({{result.date.year}}, {{result.date.month-1}}, {{result.date.day}}), {{result.total/100}}],
+                    {% endfor %}
+                ]
+            }, 
+            {% endfor %}
+        ]
+    });
+});
+
+<!-- Line chart by category -->
+{% for category in categories %}
+    $(function () {
+        Highcharts.chart('{{category}}', {
+            chart: {
+                type: 'spline', 
+                zoomType: 'x', 
+            },
+            title: {
+                text: '{{category}} Sellout by Revenue'
+            },
+            xAxis: {
+                type: 'datetime',
+                dateTimeLabelFormats: { 
+                    day: '%Y-%m-%d',
+                },
+                title: {
+                    text: 'Date'
+                }
+            },
+            yAxis: {
+                title: {
+                    text: 'Sellout (EUR)'
+                },
+                allowDecimals: false,
+                min: 0
+            },
+            tooltip: {
+                headerFormat: '<b>{series.name}</b><br>',
+                pointFormat: '{point.x:%b %e}: {point.y}', 
+                crosshairs: [true,true], 
+            },
+
+            plotOptions: {
+                spline: {
+                    marker: {
+                        enabled: true
+                    }
+                }
+            },
+
+            series: [
+                {% for account in accounts %}
+                {
+                    name: '{{account}}',
+                    data: [
+                        {% for idx, result in result_dict[category][account].iterrows() %}
+                          [Date.UTC({{result.date.year}}, {{result.date.month-1}}, {{result.date.day}}), {{result.total/100}}],
+                        {% endfor %}
+                    ]
+                }, 
+                {% endfor %}
+            ]
+        });
+    });
+{% endfor %}
+</script>
+{% endblock %}

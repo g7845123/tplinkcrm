@@ -1,0 +1,32 @@
+{% extends "template.html" %}
+{% block head %}
+<link href="{{url_for('static', filename='css/select2.min.css')}}" rel="stylesheet" />
+{% endblock %}
+
+{% block content %}
+    <h2 class="page-header">
+        Search by SKU
+    </h2>
+    <select id="skus">
+        <option></option>
+        {% for sku in skus %}
+        <option>{{sku}}</option>
+        {% endfor%}
+    </select>
+{% endblock %}
+
+{% block script %}
+<!-- Resources -->
+<script src="{{url_for('static', filename='js/select2.min.js')}}"></script>
+
+<script>
+var select2 = $("#skus").select2({
+    placeholder: "Select a SKU",
+});
+select2.on("select2:select", function () { 
+    var sku = $("#skus").select2("data")[0].text;
+    window.location.href = '/sellout/query?sku=' + sku; 
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,101 @@
+{% extends "template.html" %}
+{% block head %}
+<link href="{{url_for('static', filename='css/select2.min.css')}}" rel="stylesheet" />
+{% endblock %}
+
+{% block content %}
+    <h2>Price Dashboard</h2>
+    <h3>Query by Product</h2>
+    <select id="product">
+        <option></option>
+        {% for product in products %}
+        <option value={{product.id}} {% if product.id == product_id %} selected="selected" {% endif %}>{{product.sku}}</option>
+        {% endfor %}
+    </select>
+    <div>
+        Or view all products <a href="/price/dashboard?product=all">here</a>
+    </div>
+    {% set data = df.loc[product_id] %}
+    {% if data is defined %}
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>SKU</th>
+                <th>Distri</th>
+                <th>Gap</th>
+                {% for account in accounts %}
+                <th>{{account}}</th>
+                {% endfor %}
+                <th>Min</th>
+                <th>History</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>{{data['sku']}}</td>
+                <td>{{data['distri_cost']/100}}</td>
+                <td>{{"{:.1%}".format(data['gap'])}}</td>
+                {% for account in accounts %}
+                <td><a href="{{data[account].link}}" target="_blank">{{data[account].price/100}}</a></td>
+                {% endfor %}
+                <td>{{data['min']/100}}</td>
+                <td><a href="/price/history?product={{product_id}}" target="_blank">History</a></td>
+            </tr>
+        </tbody>
+    </table>
+    {% elif product_id != 0 %}
+    <br>
+    <div class="text-primary">
+        <strong>No price information found, please contact james.guo@tp-link.com to add it</strong>
+    </div>
+    {% endif %}
+    <h3>Product with Low Price</h2>
+    {% if not df_low.empty %}
+    <div class="alert alert-danger" role="alert">
+        <strong>Warning!</strong> Please pay special attention to the following products as PVP is lower than expected
+    </div>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>SKU</th>
+                <th>Distri</th>
+                <th>Gap</th>
+                {% for account in accounts %}
+                <th>{{account}}</th>
+                {% endfor %}
+                <th>Min</th>
+                <th>History</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for product_id, data in df_low.iterrows() %}
+            <tr>
+                <td>{{data['sku']}}</td>
+                <td>{{data['distri_cost']/100}}</td>
+                <td>{{"{:.1%}".format(data['gap'])}}</td>
+                {% for account in accounts %}
+                <td><a href="{{data[account].link}}" target="_blank">{{data[account].price/100}}</a></td>
+                {% endfor %}
+                <td>{{data['min']/100}}</td>
+                <td><a href="/price/history?product={{product_id}}" target="_blank">History</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+{% endblock %}
+
+{% block script %}
+<!-- Select2 -->
+<script src="{{url_for('static', filename='js/select2.min.js')}}"></script>
+<script>
+var select2 = $("#product").select2({
+    placeholder: "Select a SKU",
+    width: '50%', 
+});
+select2.on("select2:select", function () { 
+    var product_id = $("#product").select2("data")[0].id;
+    window.location.href = '/price/dashboard?product=' + product_id; 
+});
+</script>
+{% endblock %}

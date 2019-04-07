@@ -1,0 +1,145 @@
+{% extends "template.html" %}
+{% block content %}
+    <h1 class="page-header">
+        Task Dashboard
+    </h1>
+    <a href="/task/create" class="btn btn-primary">Add New Task</a>
+    <h2>Tasks From Me</h2>
+    <div class="input-group col-md-12">
+        <input type="text" id="search-task-from-me" class="search-query form-control" onkeyup="searchTaskFromMe()" placeholder="Search by task receipt">
+        <span class="input-group-btn">
+            <button class="btn btn-info" type="button">
+                <span class="glyphicon glyphicon-search"></span>
+            </button>
+        </span>
+    </div>
+    <table class="table table-striped" id="task-from-me">
+        <thead>
+            <tr>
+                <th>To</th>
+                <th>Subject</th>
+                <th>Created</th>
+                <th>Deadline</th>
+                <th>Status</th>
+                <th>Detail</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for task in tasks_from_me %}
+            <tr>
+                <td>{{task.task_to.email}}</td>
+                <td>{{task.subject}}</td>
+                <td>{{task.created.strftime('%Y-%m-%d')}}</td>
+                <td>{{task.deadline.strftime('%Y-%m-%d')}}</td>
+                <td>{{task.status}}</td>
+                <td><a href="/task/edit/{{task.id}}">Detail</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <h2>Tasks To Me</h2>
+    <div class="input-group col-md-12">
+        <input type="text" id="search-task-to-me" class="search-query form-control" onkeyup="searchTaskToMe()" placeholder="Search by task owner">
+        <span class="input-group-btn">
+            <button class="btn btn-info" type="button">
+                <span class="glyphicon glyphicon-search"></span>
+            </button>
+        </span>
+    </div>
+    <table class="table table-striped" id="task-to-me">
+        <thead>
+            <tr>
+                <th>From</th>
+                <th>Subject</th>
+                <th>Created</th>
+                <th>Deadline</th>
+                <th>Status</th>
+                <th>Detail</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for task in tasks_to_me %}
+            <tr>
+                <td>{{task.task_from.email}}</td>
+                <td>{{task.subject}}</td>
+                <td>{{task.created.strftime('%Y-%m-%d')}}</td>
+                <td>{{task.deadline.strftime('%Y-%m-%d')}}</td>
+                <td>{{task.status}}</td>
+                <td><a href="/task/edit/{{task.id}}">Detail</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <h2>Tasks Completed</h2>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>From</th>
+                <th>Subject</th>
+                <th>Created</th>
+                <th>Deadline</th>
+                <th>Status</th>
+                <th>Detail</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for task in tasks_completed %}
+            <tr>
+                <td>{{task.task_from.email}}</td>
+                <td>{{task.subject}}</td>
+                <td>{{task.created.strftime('%Y-%m-%d')}}</td>
+                <td>{{task.deadline.strftime('%Y-%m-%d')}}</td>
+                <td>{{task.status}}</td>
+                <td><a href="/task/edit/{{task.id}}">Detail</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
+
+
+{% block script %}
+<script>
+function searchTaskFromMe() {
+    // Declare variables 
+    var input, filter, table, tr, td, i;
+    input = document.getElementById("search-task-from-me");
+    filter = input.value.toUpperCase();
+    table = document.getElementById("task-from-me");
+    tr = table.getElementsByTagName("tr");
+  
+    // Loop through all table rows, and hide those who don't match the search query
+    for (i = 0; i < tr.length; i++) {
+        td = tr[i].getElementsByTagName("td")[0];
+        if (td) {
+            if (td.innerHTML.toUpperCase().indexOf(filter) > -1) {
+                tr[i].style.display = "";
+            } else {
+                tr[i].style.display = "none";
+            }
+        } 
+    }
+}
+
+function searchTaskToMe() {
+    // Declare variables 
+    var input, filter, table, tr, td, i;
+    input = document.getElementById("search-task-to-me");
+    filter = input.value.toUpperCase();
+    table = document.getElementById("task-to-me");
+    tr = table.getElementsByTagName("tr");
+  
+    // Loop through all table rows, and hide those who don't match the search query
+    for (i = 0; i < tr.length; i++) {
+        td = tr[i].getElementsByTagName("td")[0];
+        if (td) {
+            if (td.innerHTML.toUpperCase().indexOf(filter) > -1) {
+                tr[i].style.display = "";
+            } else {
+                tr[i].style.display = "none";
+            }
+        } 
+    }
+}
+</script>
+{% endblock %}

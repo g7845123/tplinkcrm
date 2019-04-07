@@ -1,0 +1,156 @@
+{% extends "public_template.html" %}
+
+{% block head %}
+{% endblock %}
+
+{% block content %}
+<!DOCTYPE html>
+<div>
+    <ul id="myTab" class="nav nav-tabs">
+        <li class="active"><a href="#login-tab" data-toggle="tab">Login</a></li>
+        <li class=""><a href="#register-tab" data-toggle="tab">Register</a></li>
+    </ul>
+</div>
+<div id="myTabContent" class="tab-content">
+    <div class="tab-pane fade active in" id="login-tab">
+        <form id="loginform" class="form-horizontal" action='/login' method='post'>
+            <div class="input-group">
+                <span class="input-group-addon"><i class="glyphicon glyphicon-user"></i></span>
+                <input id="login-email" type="text" class="form-control" name="email" value="" placeholder="Email"> 
+            </div>
+            <div class='text-danger' id='login-email-error'></div>
+            <div class="input-group">
+                <span class="input-group-addon"><i class="glyphicon glyphicon-lock"></i></span>
+                <input id="login-passwd" type="password" class="form-control" name="passwd" placeholder="password">
+            </div>
+            <div class='text-danger' id='login-passwd-error'></div>
+            <div class="input-group">
+                <div class="checkbox">
+                    <label>
+                        <input id="login-remember" type="checkbox" name="remember" value="1"> Remember me
+                    </label>
+                </div>
+                <div style="margin-top:10px" class="form-group">
+                    <div class="col-sm-12 controls">
+                        <input type="submit" value="Login" id='login-btn' class="btn btn-success">
+                        <!-- <button id="signinButton" type="button" class="btn btn-danger">Login with Google</button> -->
+                    </div>
+                </div>
+            </div>
+        </form>
+        <div id="login_status"></div>
+    </div>
+    <div class="tab-pane fade" id="register-tab">
+        <form id="signupform" class="form-horizontal" action="/signup" method="post">
+            <div class="form-group">
+                <div class="col-sm-12">
+                    <input type="text" class="form-control" name="email" placeholder="Email Address">
+                    <div class='text-danger' id='signup-email-error'></div>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-12">
+                    <input type="password" class="form-control" name="passwd" placeholder="Password">
+                    <div class='text-danger' id='signup-passwd-error'></div>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-12">
+                    <input type="password" class="form-control" name="passwd-re" placeholder="Confirm Password">
+                    <div class='text-danger' id='signup-passwd-re-error'></div>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-12">
+                    <input type="submit" value="Sign Up" id='signup-btn' class="btn btn-info">
+                </div>
+            </div>
+        </form>
+        <div id="signup-successful" class="text-success"></div>
+    </div>
+</div>
+
+
+{% endblock %}
+
+{% block script %}
+<script>
+// Script for signing up
+var signupForm = $('#signupform');
+signupForm.submit(function(e){
+    e.preventDefault();
+    $('#signup-btn').prop('value', 'Signing up');
+    $('#signup-btn').prop('disabled', true);
+    $.ajax({
+        type: signupForm.attr('method'), 
+        url: signupForm.attr('action'), 
+        data: signupForm.serialize(), 
+        success: function(response) {
+            $('#signup-email-error').html('');
+            $('#signup-passwd-error').html('');
+            $('#signup-passwd-re-error').html('');
+            $('#signup-successful').html('');
+            // $('#signup_status').html(response);
+            // location.reload();
+            response = JSON.parse(response);
+            // Email error
+            if(response.emailError) {
+                $('#signup-email-error').html(response.emailError);
+            }
+            // Password error
+            if(response.passwdError) {
+                $('#signup-passwd-error').html(response.passwdError);
+            }
+            // Password repeat error
+            if(response.passwdReError) {
+                $('#signup-passwd-re-error').html(response.passwdReError);
+            }
+            if(response.formValid) {
+                $('#signup-successful').html('Signup successful! Redirecting...');
+                location.reload();
+            }
+            else 
+            {
+                $('#signup-btn').prop('value', 'Sign Up');
+                $('#signup-btn').prop('disabled', false);
+            }
+        }
+    });
+});
+
+// Script for logging in
+var loginForm = $('#loginform');
+loginForm.submit(function(e){
+    e.preventDefault();
+    $('#login-btn').prop('value', 'Logging in');
+    $('#login-btn').prop('disabled', true);
+    $.ajax({
+        type: loginForm.attr('method'), 
+        url: loginForm.attr('action'), 
+        data: loginForm.serialize(), 
+        success: function(response) {
+            $('#login-email-error').html('');
+            $('#login-passwd-error').html('');
+            response = JSON.parse(response);
+            // Email error
+            if(response.emailError) {
+                $('#login-email-error').html(response.emailError);
+            }
+            // Password error
+            if(response.passwdError) {
+                $('#login-passwd-error').html(response.passwdError);
+            }
+            if(response.formValid) {
+                $('#login-successful').html('Login successful! Redirecting...');
+                location.reload();
+            }
+            else 
+            {
+                $('#login-btn').prop('value', 'Login');
+                $('#login-btn').prop('disabled', false);
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

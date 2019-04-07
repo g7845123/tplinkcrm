@@ -1,0 +1,65 @@
+{% extends "template.html" %}
+{% block head %}
+<link href="{{url_for('static', filename='css/select2.min.css')}}" rel="stylesheet" />
+{% endblock %}
+
+{% block content %}
+    <h2>{{account.name}} WOC</h2>
+    <h3>Possible Overstock</h3>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>SKU</th>
+                <th>Stock</th>
+                <th>BO</th>
+                <th>Weekly Sales</th>
+                <th>WOC</th>
+                <th>Overstock Qty</th>
+                <th>History</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for sku, row in overstock_df.iterrows() %}
+            <tr>
+                <td>{{sku}}</td>
+                <td>{{row['stock']}}</td>
+                <td>{{row['bo']}}</td>
+                <td>{{row['adj_weekly']}}</td>
+                <td>{{row['woc']}}</td>
+                <td>{{0-row['order_suggestion']}}</td>
+                <td><a href="/stock/history?sku={{sku}}" target="_blank">History</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <h3>Order suggestion</h3>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>SKU</th>
+                <th>Stock</th>
+                <th>BO</th>
+                <th>Weekly sales</th>
+                <th>WOC</th>
+                <th>Order Suggestion</th>
+                <th>History</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for sku, row in lackstock_df.iterrows() %}
+            <tr>
+                <td>{{sku}}</td>
+                <td>{{row['stock']}}</td>
+                <td>{{row['bo']}}</td>
+                <td>{{row['adj_weekly']}}</td>
+                <td>{{row['woc']}}</td>
+                <td>{{row['order_suggestion']}}</td>
+                <td><a href="/stock/history?sku={{sku}}" target="_blank">History</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
+
+{% block script %}
+{% endblock %}

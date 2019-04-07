@@ -1,0 +1,20 @@
+{% extends 'template.html' %}
+{% block content %}
+
+<h1 class="page-header">
+    Upload Account
+</h1>
+<form class="form-horizontal" action="#" method="POST">
+    <p>Please note: data must be with header, columns must be the same order as below</p>
+    <ol>
+        <li>Account Name</li>
+        <li>Tax Number</li>
+        <li>Account Type</li>
+    </ol>
+    <textarea class="form-control" id="account" name="account"></textarea>
+    <center>
+        <button type="submit" class="btn btn-primary" id="submit">Submit</button>
+    </center>
+</form>
+
+{% endblock %}

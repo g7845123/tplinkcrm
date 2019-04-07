@@ -1,0 +1,56 @@
+<html>
+  <head>
+  <style>
+    table {
+        border-collapse: collapse;
+    }
+
+    table, td, th {
+        border: 1px solid black;
+    }
+    </style>
+  </head>
+  <body>
+    <p>Dear {{user_name}}, </p>
+    <p>Today's price report is available, you can click <a href="http://www.james-guo.com/price/dashboard">here</a> to view full report</p>
+    <strong>Warning!</strong> Please pay special attention to the following products as PVP is lower than expected
+    <table>
+        <thead>
+            <tr>
+                <th>SKU</th>
+                <th>Distri</th>
+                <th style="background-color:yellow">Gap</th>
+                {% for account in accounts %}
+                <th>{{account}}</th>
+                {% endfor %}
+                <th>Min</th>
+                <th>History</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for product_id, data in df_low.iterrows() %}
+            <tr>
+                <td>{{data['sku']}}</td>
+                <td>{{data['distri_cost']/100}}</td>
+                <td style="background-color:yellow">{{"{:.1%}".format(data['gap'])}}</td>
+                {% for account in accounts %}
+                <td><a href="{{data[account].link}}" target="_blank">{{data[account].price/100}}</a></td>
+                {% endfor %}
+                <td>{{data['min']/100}}</td>
+                <td><a href="http://www.james-guo.com/price/history?product={{product_id}}" target="_blank">History</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <br>
+    Notes: 
+    <ul>
+        <li>This is an automatic sent email, your reply to price-monitor@james-guo.com will be ignored</li>
+    </ul>
+    <br>
+    <p>
+        Best Regards, <br>
+        Price Monitor Team
+    </p>
+  </body>
+</html>

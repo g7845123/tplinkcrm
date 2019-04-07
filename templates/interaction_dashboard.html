@@ -1,0 +1,57 @@
+{% extends 'template.html' %}
+{% block content %}
+
+<!-- Modal -->
+<div class="modal fade" id="modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-body" id="modal-body" style="white-space: pre-line;"></div>
+    </div>
+  </div>
+</div>
+
+<h1 class="page-header">
+    Customer Interaction Dashboard
+</h1>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Account</th>
+            <th>Manager</th>
+            <th>Type</th>
+            <th>Note</th>
+            <th>Detail</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in interactions %}
+        <tr>
+            <td>{{row['date'].strftime('%Y-%m-%d')}}</td>
+            <td>{{row['account']}}</td>
+            <td>{{row['manager']}}</td>
+            <td>{{row['type']}}</td>
+            {% if row.note|length < 50 %}
+            <td>{{row.note[:50]}}</td>
+            {% else %}
+            <td>{{row.note[:50]+'...'}}</td>
+            {% endif %}
+            <td><a href="#" onclick="note{{row.id}}Show(); return false;">Show Note</a></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}
+
+{% block script %}
+<script>
+{% for row in interactions %}
+var note{{row.id}}Show = function() {
+    var modalBody = $('#modal-body');
+    modalBody.html(`{{row.note}}`);
+    $('#modal').modal('show');
+}
+{% endfor %}
+</script>
+{% endblock %}
