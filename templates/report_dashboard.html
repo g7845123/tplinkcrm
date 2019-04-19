@@ -7,6 +7,10 @@
     <h1 class="page-header">
         Sales Dashboard
     </h1>
+    <h2>Sales Overview</h2>
+    <label class="radio-inline"><input type="radio" name="sellin-optradio" checked="checked" id="sellin-revenue">Revenue</label>
+    <label class="radio-inline"><input type="radio" name="sellin-optradio" id="sellin-qty">Qty</label>
+    <div id="sellin" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
     <h2>Customer Width</h2>
     <div id="customer-width" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
 {% endblock %}
@@ -16,6 +20,96 @@
 <script src="{{url_for('static', filename='highcharts/modules/exporting.js')}}"></script>
 
 <script>
+// Sellin Overview
+var sellinRevenueData = [
+        {% for idx, column in sellin_df.revenue.iteritems() %}
+        {
+            name: "{{idx}}", 
+            data: [
+                {% for e in column %}
+                {{e/100}},
+                {% endfor %}
+            ]
+        }, 
+        {% endfor %}
+    ]; 
+var sellinQtyData = [
+        {% for idx, column in sellin_df.qty.iteritems() %}
+        {
+            name: "{{idx}}", 
+            data: [
+                {% for e in column %}
+                {{e}},
+                {% endfor %}
+            ]
+        }, 
+        {% endfor %}
+    ]; 
+// Revenue button action 
+var element = document.getElementById('sellin-revenue');
+$(element).click(function () {
+    sellinChart.update({
+        series: sellinRevenueData,
+        yAxis: {
+            title: {
+                text: 'Sellin (EUR)'
+            },
+            min: 0
+        },
+    });
+});
+// Qty button action 
+var element = document.getElementById('sellin-qty');
+$(element).click(function () {
+    sellinChart.update({
+        series: sellinQtyData,
+        yAxis: {
+            title: {
+                text: 'Qty'
+            },
+            min: 0
+        },
+    });
+});
+var sellinChart = Highcharts.chart('sellin', {
+    chart: {
+        type: 'column'
+    },
+    title: {
+        text: 'Sellin'
+    },
+    xAxis: {
+        categories: [
+            {% for idx, row in sellin_df.iterrows() %}
+            '{{idx}}', 
+            {% endfor %}
+        ],
+        crosshair: true
+    },
+    yAxis: {
+        min: 0,
+        title: {
+            text: 'Sellin (EUR)'
+        }
+    },
+    tooltip: {
+        headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
+        pointFormat: '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' +
+            '<td style="padding:0"><b>{point.y:.0f}</b></td></tr>',
+        footerFormat: '</table>',
+        shared: true,
+        useHTML: true
+    },
+    plotOptions: {
+        column: {
+            pointPadding: 0.2,
+            borderWidth: 0
+        }
+    },
+    series: sellinRevenueData, 
+});
+
+// Active Customer Number
 Highcharts.chart('customer-width', {
     chart: {
         type: 'column'

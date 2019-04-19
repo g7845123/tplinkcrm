@@ -2399,10 +2399,19 @@ def reportDashboard():
             aggfunc = 'count', 
             fill_value=0, 
         )
+    sellin_df = pd.pivot_table(
+            result_df, 
+            values=['revenue', 'qty'], 
+            columns=['year'], 
+            index=['month'], 
+            aggfunc=np.sum, 
+            fill_value=0
+        )
     return render_template(
         'report_dashboard.html', 
         login = login_session, 
         active_customer_df = active_customer_df, 
+        sellin_df = sellin_df, 
     )
 
 @app.route('/report-by-account/result')
