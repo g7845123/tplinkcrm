@@ -2328,6 +2328,83 @@ def reportByAccountStart():
         categories = categories, 
     )
 
+@app.route('/report/dashboard/start')
+@login_required(['ES', 'DE'])
+def reportDashboardStart():
+    user = getUserById(login_session['id'])
+    result = session.query(
+            Sellin
+        ).filter(
+            Sellin.country == user.country
+        ).order_by(
+            Sellin.date.desc()
+        ).first()
+    report_day_start = date(result.date.year, 1, 1)
+    last_day = monthrange(result.date.year, result.date.month)[1]
+    report_day_end = date(result.date.year, result.date.month, last_day)
+    report_range = (report_day_start, report_day_end)
+    result = session.query(
+            Account.type.distinct(), 
+        ).filter(
+            Account.country == user.country
+        ).all()
+    types = [e[0] for e in result]
+    types.remove('TP-LINK')
+    types.remove('DISTRIBUTOR')
+    return render_template(
+        'report_dashboard_start.html', 
+        login = login_session, 
+        report_range = report_range, 
+        types = types, 
+    )
+
+@app.route('/report/dashboard')
+@login_required(['ES', 'DE'])
+def reportDashboard():
+    user = getUserById(login_session['id'])
+    result = session.query(
+            Sellin
+        ).filter(
+            Sellin.country == user.country
+        ).order_by(
+            Sellin.date.desc()
+        ).first()
+    account_types = request.args.getlist('type')
+    account_ids = session.query(
+            Account.id
+        ).filter(
+            Account.type.in_(account_types), 
+            Account.country == user.country, 
+        )
+    result = session.query(
+            extract('year', Sellin.date).label('year'), 
+            extract('month', Sellin.date).label('month'), 
+            Sellin.account_id.label('account_id'), 
+            func.sum(Sellin.unit_price * Sellin.qty).label('revenue'), 
+            func.sum(Sellin.qty).label('qty'), 
+        ).filter(
+            Sellin.account_id.in_(account_ids), 
+            Sellin.country == user.country, 
+        ).group_by(
+            'year', 'month', 'account_id'
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    result_df['month'] = result_df['month'].astype(int)
+    result_df['year'] = result_df['year'].astype(int)
+    active_customer_df = pd.pivot_table(
+            result_df, 
+            values = 'account_id', 
+            index = ['year'], 
+            columns = ['month'], 
+            aggfunc = 'count', 
+            fill_value=0, 
+        )
+    return render_template(
+        'report_dashboard.html', 
+        login = login_session, 
+        active_customer_df = active_customer_df, 
+    )
+
 @app.route('/report-by-account/result')
 @login_required(['ES', 'DE'])
 def reportResult():

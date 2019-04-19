@@ -1,0 +1,68 @@
+{% extends "template.html" %}
+
+{% block head %}
+{% endblock %}
+
+{% block content %}
+    <h1 class="page-header">
+        Sales Dashboard
+    </h1>
+    <h2>Customer Width</h2>
+    <div id="customer-width" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
+{% endblock %}
+
+{% block script %}
+<script src="{{url_for('static', filename='highcharts/highcharts.js')}}"></script>
+<script src="{{url_for('static', filename='highcharts/modules/exporting.js')}}"></script>
+
+<script>
+Highcharts.chart('customer-width', {
+    chart: {
+        type: 'column'
+    },
+    title: {
+        text: 'Active Customer Number'
+    },
+    xAxis: {
+        categories: [
+            {% for idx, column in active_customer_df.iteritems() %}
+            '{{idx}}', 
+            {% endfor %}
+        ],
+        crosshair: true
+    },
+    yAxis: {
+        min: 0,
+        title: {
+            text: 'Count'
+        }
+    },
+    tooltip: {
+        headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
+        pointFormat: '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' +
+            '<td style="padding:0"><b>{point.y:.0f}</b></td></tr>',
+        footerFormat: '</table>',
+        shared: true,
+        useHTML: true
+    },
+    plotOptions: {
+        column: {
+            pointPadding: 0.2,
+            borderWidth: 0
+        }
+    },
+    series: [
+        {% for idx, column in active_customer_df.iterrows() %}
+        {
+            name: "{{idx}}", 
+            data: [
+                {% for e in column %}
+                {{e}},
+                {% endfor %}
+            ]
+        }, 
+        {% endfor %}
+    ]
+});
+</script>
+{% endblock %}
