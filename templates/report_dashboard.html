@@ -13,6 +13,8 @@
     <div id="sellin" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
     <h2>Customer Width</h2>
     <div id="customer-width" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
+    <h2>Customer Depth</h2>
+    <div id="customer-depth" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
 {% endblock %}
 
 {% block script %}
@@ -147,6 +149,56 @@ Highcharts.chart('customer-width', {
     },
     series: [
         {% for idx, column in customer_width_df.iterrows() %}
+        {
+            name: "{{idx}}", 
+            data: [
+                {% for e in column %}
+                {{e}},
+                {% endfor %}
+            ]
+        }, 
+        {% endfor %}
+    ]
+});
+
+// Customer Depth
+Highcharts.chart('customer-depth', {
+    chart: {
+        type: 'column'
+    },
+    title: {
+        text: 'Active Customer Number'
+    },
+    xAxis: {
+        categories: [
+            {% for idx, column in customer_depth_df.iteritems() %}
+            '{{idx}}', 
+            {% endfor %}
+        ],
+        crosshair: true
+    },
+    yAxis: {
+        min: 0,
+        title: {
+            text: 'Count'
+        }
+    },
+    tooltip: {
+        headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
+        pointFormat: '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' +
+            '<td style="padding:0"><b>{point.y:.0f}</b></td></tr>',
+        footerFormat: '</table>',
+        shared: true,
+        useHTML: true
+    },
+    plotOptions: {
+        column: {
+            pointPadding: 0.2,
+            borderWidth: 0
+        }
+    },
+    series: [
+        {% for idx, column in customer_depth_df.iterrows() %}
         {
             name: "{{idx}}", 
             data: [

@@ -2370,6 +2370,7 @@ def reportDashboard():
             Sellin.date.desc()
         ).first()
     account_types = request.args.getlist('type')
+    threshold = int(request.args.get('threshold'))
     account_ids = session.query(
             Account.id
         ).filter(
@@ -2391,14 +2392,6 @@ def reportDashboard():
     result_df = pd.read_sql(result.statement, result.session.bind)
     result_df['month'] = result_df['month'].astype(int)
     result_df['year'] = result_df['year'].astype(int)
-    customer_width_df = pd.pivot_table(
-            result_df, 
-            values = 'account_id', 
-            index = ['year'], 
-            columns = ['month'], 
-            aggfunc = 'count', 
-            fill_value=0, 
-        )
     sellin_df = pd.pivot_table(
             result_df, 
             values=['revenue', 'qty'], 
@@ -2407,10 +2400,29 @@ def reportDashboard():
             aggfunc=np.sum, 
             fill_value=0
         )
+    customer_width_df = result_df[result_df['qty']>=1]
+    customer_width_df = pd.pivot_table(
+            customer_width_df, 
+            values = 'account_id', 
+            index = ['year'], 
+            columns = ['month'], 
+            aggfunc = 'count', 
+            fill_value=0, 
+        )
+    customer_depth_df = result_df[result_df['qty']>=threshold]
+    customer_depth_df = pd.pivot_table(
+            customer_depth_df, 
+            values = 'account_id', 
+            index = ['year'], 
+            columns = ['month'], 
+            aggfunc = 'count', 
+            fill_value=0, 
+        )
     return render_template(
         'report_dashboard.html', 
         login = login_session, 
         customer_width_df = customer_width_df, 
+        customer_depth_df = customer_depth_df, 
         sellin_df = sellin_df, 
     )
 
