@@ -15,6 +15,16 @@
     <div id="customer-width" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
     <h2>Customer Depth</h2>
     <div id="customer-depth" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
+    <h2>Sales Overview</h2>
+    <div id="sellin-overview" style="width: 310px; height: 400px; margin: 0 auto"></div>
+    <h2>Sales by Category</h2>
+    <div id="sellin-category" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
+    <h2>Sales by Sub-Category</h2>
+    <div id="sellin-sub-category" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
+    <h2>Sales by SKU</h2>
+    <label class="radio-inline"><input type="radio" name="sellin-sku-optradio" checked="checked" id="sellin-sku-revenue">Revenue</label>
+    <label class="radio-inline"><input type="radio" name="sellin-sku-optradio" id="sellin-sku-qty">Qty</label>
+    <div id="sellin-sku" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
 {% endblock %}
 
 {% block script %}
@@ -210,5 +220,239 @@ Highcharts.chart('customer-depth', {
         {% endfor %}
     ]
 });
+
+// Sellin Overview
+Highcharts.chart('sellin-overview', {
+    chart: {
+        type: 'column'
+    },
+    title: {
+        text: 'Sellin Overview ({{date_start.strftime("%b %d")}} - {{date_end.strftime("%b %d")}})'
+    },
+    xAxis: {
+        categories: [''],
+        crosshair: true
+    },
+    yAxis: {
+        min: 0,
+        title: {
+            text: 'Sellin (EUR)'
+        }
+    },
+    tooltip: {
+        headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
+        pointFormat: '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' +
+            '<td style="padding:0"><b>{point.y:.1f} EUR</b></td></tr>',
+        footerFormat: '</table>',
+        shared: true,
+        useHTML: true
+    },
+    plotOptions: {
+        column: {
+            pointPadding: 0.2,
+            borderWidth: 0
+        }
+    },
+    series: [
+        {% for idx, row in overview_df.iterrows() %}
+        {
+            name: "{{idx}}", 
+            data: [
+                {{row.revenue/100}},
+            ]
+        }, 
+        {% endfor %}
+    ]
+});
+
+// Category
+Highcharts.chart('sellin-category', {
+    chart: {
+        type: 'column'
+    },
+    title: {
+text: 'Sellin by Category ({{date_start.strftime("%b %d")}} - {{date_end.strftime("%b %d")}})'
+    },
+    xAxis: {
+        categories: [
+            {% for idx, row in category_df.iterrows() %}
+            '{{idx}}', 
+            {% endfor %}
+        ],
+        crosshair: true
+    },
+    yAxis: {
+        min: 0,
+        title: {
+            text: 'Sellin (EUR)'
+        }
+    },
+    tooltip: {
+        headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
+        pointFormat: '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' +
+            '<td style="padding:0"><b>{point.y:.1f} EUR</b></td></tr>',
+        footerFormat: '</table>',
+        shared: true,
+        useHTML: true
+    },
+    plotOptions: {
+        column: {
+            pointPadding: 0.2,
+            borderWidth: 0
+        }
+    },
+    series: [
+        {% for idx, column in category_df.iteritems() %}
+        {
+            name: "{{idx}}", 
+            data: [
+                {% for e in column %}
+                {{e/100}},
+                {% endfor %}
+            ]
+        }, 
+        {% endfor %}
+    ]
+});
+
+// Sub-Category
+Highcharts.chart('sellin-sub-category', {
+    chart: {
+        type: 'column'
+    },
+    title: {
+        text: 'Sellin by Sub-category ({{date_start.strftime("%b %d")}} - {{date_end.strftime("%b %d")}})'
+    },
+    xAxis: {
+        categories: [
+            {% for idx, row in sub_category_df.iterrows() %}
+            '{{idx}}', 
+            {% endfor %}
+        ],
+        crosshair: true
+    },
+    yAxis: {
+        min: 0,
+        title: {
+            text: 'Sellin (EUR)'
+        }
+    },
+    tooltip: {
+        headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
+        pointFormat: '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' +
+            '<td style="padding:0"><b>{point.y:.1f} EUR</b></td></tr>',
+        footerFormat: '</table>',
+        shared: true,
+        useHTML: true
+    },
+    plotOptions: {
+        column: {
+            pointPadding: 0.2,
+            borderWidth: 0
+        }
+    },
+    series: [
+        {% for idx, column in sub_category_df.iteritems() %}
+        {
+            name: "{{idx}}", 
+            data: [
+                {% for e in column %}
+                {{e/100}},
+                {% endfor %}
+            ]
+        }, 
+        {% endfor %}
+    ]
+});
+
+// SKU
+var skuRevenueData = [
+        {% for idx, column in sku_df.revenue.iteritems() %}
+        {
+            name: "{{idx}}", 
+            data: [
+                {% for e in column %}
+                {{e/100}},
+                {% endfor %}
+            ]
+        }, 
+        {% endfor %}
+    ]; 
+var skuQtyData = [
+        {% for idx, column in sku_df.qty.iteritems() %}
+        {
+            name: "{{idx}}", 
+            data: [
+                {% for e in column %}
+                {{e}},
+                {% endfor %}
+            ]
+        }, 
+        {% endfor %}
+    ]; 
+// Revenue button action 
+var element = document.getElementById('sellin-sku-revenue');
+$(element).click(function () {
+    skuChart.update({
+        series: skuRevenueData,
+        yAxis: {
+            title: {
+                text: 'Qty'
+            },
+            min: 0
+        },
+    });
+});
+// Qty button action 
+var element = document.getElementById('sellin-sku-qty');
+$(element).click(function () {
+    skuChart.update({
+        series: skuQtyData,
+        yAxis: {
+            title: {
+                text: 'Sellin (EUR)'
+            },
+            min: 0
+        },
+    });
+});
+var skuChart = Highcharts.chart('sellin-sku', {
+    chart: {
+        type: 'column'
+    },
+    title: {
+        text: 'Sellin by SKU ({{date_start.strftime("%b %d")}} - {{date_end.strftime("%b %d")}})'
+    },
+    xAxis: {
+        categories: [
+            {% for idx, row in sku_df.iterrows() %}
+            '{{idx}}', 
+            {% endfor %}
+        ],
+        crosshair: true
+    },
+    yAxis: {
+        min: 0,
+        title: {
+            text: 'Sellin (EUR)'
+        }
+    },
+    tooltip: {
+        headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
+        pointFormat: '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' +
+            '<td style="padding:0"><b>{point.y:.0f}</b></td></tr>',
+        footerFormat: '</table>',
+        shared: true,
+        useHTML: true
+    },
+    plotOptions: {
+        column: {
+            pointPadding: 0.2,
+            borderWidth: 0
+        }
+    },
+    series: skuRevenueData, 
+});
+
 </script>
 {% endblock %}

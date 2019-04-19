@@ -2362,6 +2362,10 @@ def reportDashboardStart():
 @login_required(['ES', 'DE'])
 def reportDashboard():
     user = getUserById(login_session['id'])
+    date_start = request.args.get('start')
+    date_start = parsing_date(date_start)
+    date_end = request.args.get('end')
+    date_end = parsing_date(date_end)
     result = session.query(
             Sellin
         ).filter(
@@ -2418,12 +2422,81 @@ def reportDashboard():
             aggfunc = 'count', 
             fill_value=0, 
         )
+    result = session.query(
+            extract('year', Sellin.date).label('year'), 
+            Product.sku.label('sku'), 
+            Sellin.distri_id.label('distri_id'), 
+            Product.category.label('category'), 
+            Product.sub_category.label('sub_category'), 
+            func.sum(Sellin.unit_price * Sellin.qty).label('revenue'), 
+            func.sum(Sellin.qty).label('qty'), 
+        ).filter(
+            Sellin.account_id.in_(account_ids),
+            Sellin.country == user.country,
+            Sellin.product_id == Product.id,
+            extract('month', Sellin.date) >= date_start.month, 
+            extract('month', Sellin.date) <= date_end.month, 
+        ).group_by(
+            'year', 'category', 'sub_category', 'sku', 'distri_id', 
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    result_df['year'] = result_df['year'].astype(int)
+    overview_df = pd.pivot_table(
+            result_df, 
+            values='revenue', 
+            columns=[], 
+            index=['year'], 
+            aggfunc=np.sum, 
+            fill_value=0
+        )
+    category_df = pd.pivot_table(
+            result_df, 
+            values='revenue', 
+            columns=['year'], 
+            index=['category'], 
+            aggfunc=np.sum, 
+            fill_value=0
+        )
+    category_df['weight'] = category_df.sum(axis=1)
+    category_df.sort_values(by=['weight'], ascending=False, inplace=True)
+    category_df.drop(columns=['weight'], inplace=True)
+    category_df = category_df.head(10)
+    sub_category_df = pd.pivot_table(
+            result_df, 
+            values='revenue', 
+            columns=['year'], 
+            index=['sub_category'], 
+            aggfunc=np.sum, 
+            fill_value=0
+        )
+    sub_category_df['weight'] = sub_category_df.sum(axis=1)
+    sub_category_df.sort_values(by=['weight'], ascending=False, inplace=True)
+    sub_category_df.drop(columns=['weight'], inplace=True)
+    sub_category_df = sub_category_df.head(10)
+    sku_df = pd.pivot_table(
+            result_df, 
+            values=['revenue', 'qty'], 
+            columns=['year'], 
+            index=['sku'], 
+            aggfunc=np.sum, 
+            fill_value=0
+        )
+    sku_df['weight'] = sku_df.sum(axis=1)
+    sku_df.sort_values(by=['weight'], ascending=False, inplace=True)
+    sku_df.drop(columns=['weight'], inplace=True)
+    sku_df = sku_df.head(10)
     return render_template(
         'report_dashboard.html', 
         login = login_session, 
+        date_start = date_start, 
+        date_end = date_end, 
         customer_width_df = customer_width_df, 
         customer_depth_df = customer_depth_df, 
         sellin_df = sellin_df, 
+        overview_df = overview_df, 
+        category_df = category_df, 
+        sub_category_df = sub_category_df, 
+        sku_df = sku_df, 
     )
 
 @app.route('/report-by-account/result')
