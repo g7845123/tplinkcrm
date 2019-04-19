@@ -119,7 +119,7 @@ Highcharts.chart('customer-width', {
     },
     xAxis: {
         categories: [
-            {% for idx, column in active_customer_df.iteritems() %}
+            {% for idx, column in customer_width_df.iteritems() %}
             '{{idx}}', 
             {% endfor %}
         ],
@@ -146,7 +146,7 @@ Highcharts.chart('customer-width', {
         }
     },
     series: [
-        {% for idx, column in active_customer_df.iterrows() %}
+        {% for idx, column in customer_width_df.iterrows() %}
         {
             name: "{{idx}}", 
             data: [

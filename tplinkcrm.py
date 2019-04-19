@@ -2391,7 +2391,7 @@ def reportDashboard():
     result_df = pd.read_sql(result.statement, result.session.bind)
     result_df['month'] = result_df['month'].astype(int)
     result_df['year'] = result_df['year'].astype(int)
-    active_customer_df = pd.pivot_table(
+    customer_width_df = pd.pivot_table(
             result_df, 
             values = 'account_id', 
             index = ['year'], 
@@ -2410,7 +2410,7 @@ def reportDashboard():
     return render_template(
         'report_dashboard.html', 
         login = login_session, 
-        active_customer_df = active_customer_df, 
+        customer_width_df = customer_width_df, 
         sellin_df = sellin_df, 
     )
 
