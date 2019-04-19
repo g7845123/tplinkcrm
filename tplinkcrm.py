@@ -2396,7 +2396,7 @@ def reportDashboard():
     result_df = pd.read_sql(result.statement, result.session.bind)
     result_df['month'] = result_df['month'].astype(int)
     result_df['year'] = result_df['year'].astype(int)
-    sellin_df = pd.pivot_table(
+    monthview_df = pd.pivot_table(
             result_df, 
             values=['revenue', 'qty'], 
             columns=['year'], 
@@ -2492,7 +2492,7 @@ def reportDashboard():
         date_end = date_end, 
         customer_width_df = customer_width_df, 
         customer_depth_df = customer_depth_df, 
-        sellin_df = sellin_df, 
+        monthview_df = monthview_df, 
         overview_df = overview_df, 
         category_df = category_df, 
         sub_category_df = sub_category_df, 

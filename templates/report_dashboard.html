@@ -7,10 +7,10 @@
     <h1 class="page-header">
         Sales Dashboard
     </h1>
-    <h2>Sales Overview</h2>
-    <label class="radio-inline"><input type="radio" name="sellin-optradio" checked="checked" id="sellin-revenue">Revenue</label>
-    <label class="radio-inline"><input type="radio" name="sellin-optradio" id="sellin-qty">Qty</label>
-    <div id="sellin" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
+    <h2>Sales by Month</h2>
+    <label class="radio-inline"><input type="radio" name="monthview-optradio" checked="checked" id="monthview-revenue">Revenue</label>
+    <label class="radio-inline"><input type="radio" name="monthview-optradio" id="monthview-qty">Qty</label>
+    <div id="monthview" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
     <h2>Customer Width</h2>
     <div id="customer-width" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
     <h2>Customer Depth</h2>
@@ -32,9 +32,9 @@
 <script src="{{url_for('static', filename='highcharts/modules/exporting.js')}}"></script>
 
 <script>
-// Sellin Overview
-var sellinRevenueData = [
-        {% for idx, column in sellin_df.revenue.iteritems() %}
+// Sellin Month View
+var monthviewRevenueData = [
+        {% for idx, column in monthview_df.revenue.iteritems() %}
         {
             name: "{{idx}}", 
             data: [
@@ -45,8 +45,8 @@ var sellinRevenueData = [
         }, 
         {% endfor %}
     ]; 
-var sellinQtyData = [
-        {% for idx, column in sellin_df.qty.iteritems() %}
+var monthviewQtyData = [
+        {% for idx, column in monthview_df.qty.iteritems() %}
         {
             name: "{{idx}}", 
             data: [
@@ -58,10 +58,10 @@ var sellinQtyData = [
         {% endfor %}
     ]; 
 // Revenue button action 
-var element = document.getElementById('sellin-revenue');
+var element = document.getElementById('monthview-revenue');
 $(element).click(function () {
-    sellinChart.update({
-        series: sellinRevenueData,
+    monthviewChart.update({
+        series: monthviewRevenueData,
         yAxis: {
             title: {
                 text: 'Sellin (EUR)'
@@ -71,10 +71,10 @@ $(element).click(function () {
     });
 });
 // Qty button action 
-var element = document.getElementById('sellin-qty');
+var element = document.getElementById('monthview-qty');
 $(element).click(function () {
-    sellinChart.update({
-        series: sellinQtyData,
+    monthviewChart.update({
+        series: monthviewQtyData,
         yAxis: {
             title: {
                 text: 'Qty'
@@ -83,7 +83,7 @@ $(element).click(function () {
         },
     });
 });
-var sellinChart = Highcharts.chart('sellin', {
+var monthviewChart = Highcharts.chart('monthview', {
     chart: {
         type: 'column'
     },
@@ -92,7 +92,7 @@ var sellinChart = Highcharts.chart('sellin', {
     },
     xAxis: {
         categories: [
-            {% for idx, row in sellin_df.iterrows() %}
+            {% for idx, row in monthview_df.iterrows() %}
             '{{idx}}', 
             {% endfor %}
         ],
@@ -118,7 +118,7 @@ var sellinChart = Highcharts.chart('sellin', {
             borderWidth: 0
         }
     },
-    series: sellinRevenueData, 
+    series: monthviewRevenueData, 
 });
 
 // Active Customer Number
