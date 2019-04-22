@@ -1,0 +1,238 @@
+{% extends "template.html" %}
+
+{% block head %}
+{% endblock %}
+
+{% block content %}
+    <h1 class="page-header">
+        Sales Dashboard
+    </h1>
+    <h2>Sales by Month</h2>
+    <label class="radio-inline"><input type="radio" name="monthview-optradio" checked="checked" id="monthview-revenue">Revenue</label>
+    <label class="radio-inline"><input type="radio" name="monthview-optradio" id="monthview-qty">Qty</label>
+    <div id="monthview" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
+    <h2>Customer Width</h2>
+    <div id="customer-width" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
+    <h2>Customer Depth</h2>
+    <div id="customer-depth" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
+    <h2>Customer Detail</h2>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Account</th>
+                <th>{{report_range[1].year-1}}</th>
+                <th>{{report_range[1].year}}</th>
+                <th>Gap</th>
+                <th>Detail</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for idx, row in progress_df.iterrows() %}
+            <tr>
+                <td>{{row.account_name}}</td>
+                <td>{{row[report_range[1].year-1]}}</td>
+                <td>{{row[report_range[1].year]}}</td>
+                <td>{{row.gap}}</td>
+                <td><a href="/account/{{row.account_id}}?start={{report_range[0].strftime('%Y-%m-%d')}}&end={{report_range[1].strftime('%Y-%m-%d')}}" target="_blank">Detail</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
+
+{% block script %}
+<script src="{{url_for('static', filename='highcharts/highcharts.js')}}"></script>
+<script src="{{url_for('static', filename='highcharts/modules/exporting.js')}}"></script>
+
+<script>
+// Sellin Month View
+var monthviewRevenueData = [
+        {% for idx, column in monthview_df.revenue.iteritems() %}
+        {
+            name: "{{idx}}", 
+            data: [
+                {% for e in column %}
+                {{e/100}},
+                {% endfor %}
+            ]
+        }, 
+        {% endfor %}
+    ]; 
+var monthviewQtyData = [
+        {% for idx, column in monthview_df.qty.iteritems() %}
+        {
+            name: "{{idx}}", 
+            data: [
+                {% for e in column %}
+                {{e}},
+                {% endfor %}
+            ]
+        }, 
+        {% endfor %}
+    ]; 
+// Revenue button action 
+var element = document.getElementById('monthview-revenue');
+$(element).click(function () {
+    monthviewChart.update({
+        series: monthviewRevenueData,
+        yAxis: {
+            title: {
+                text: 'Sellin (EUR)'
+            },
+            min: 0
+        },
+    });
+});
+// Qty button action 
+var element = document.getElementById('monthview-qty');
+$(element).click(function () {
+    monthviewChart.update({
+        series: monthviewQtyData,
+        yAxis: {
+            title: {
+                text: 'Qty'
+            },
+            min: 0
+        },
+    });
+});
+var monthviewChart = Highcharts.chart('monthview', {
+    chart: {
+        type: 'column'
+    },
+    title: {
+        text: 'Sellin'
+    },
+    xAxis: {
+        categories: [
+            {% for idx, row in monthview_df.iterrows() %}
+            '{{idx}}', 
+            {% endfor %}
+        ],
+        crosshair: true
+    },
+    yAxis: {
+        min: 0,
+        title: {
+            text: 'Sellin (EUR)'
+        }
+    },
+    tooltip: {
+        headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
+        pointFormat: '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' +
+            '<td style="padding:0"><b>{point.y:.0f}</b></td></tr>',
+        footerFormat: '</table>',
+        shared: true,
+        useHTML: true
+    },
+    plotOptions: {
+        column: {
+            pointPadding: 0.2,
+            borderWidth: 0
+        }
+    },
+    series: monthviewRevenueData, 
+});
+
+// Active Customer Number
+Highcharts.chart('customer-width', {
+    chart: {
+        type: 'column'
+    },
+    title: {
+        text: 'Active Customer Number'
+    },
+    xAxis: {
+        categories: [
+            {% for idx, column in customer_width_df.iteritems() %}
+            '{{idx}}', 
+            {% endfor %}
+        ],
+        crosshair: true
+    },
+    yAxis: {
+        min: 0,
+        title: {
+            text: 'Count'
+        }
+    },
+    tooltip: {
+        headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
+        pointFormat: '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' +
+            '<td style="padding:0"><b>{point.y:.0f}</b></td></tr>',
+        footerFormat: '</table>',
+        shared: true,
+        useHTML: true
+    },
+    plotOptions: {
+        column: {
+            pointPadding: 0.2,
+            borderWidth: 0
+        }
+    },
+    series: [
+        {% for idx, column in customer_width_df.iterrows() %}
+        {
+            name: "{{idx}}", 
+            data: [
+                {% for e in column %}
+                {{e}},
+                {% endfor %}
+            ]
+        }, 
+        {% endfor %}
+    ]
+});
+
+// Customer Depth
+Highcharts.chart('customer-depth', {
+    chart: {
+        type: 'column'
+    },
+    title: {
+        text: 'Active Customer Number'
+    },
+    xAxis: {
+        categories: [
+            {% for idx, column in customer_depth_df.iteritems() %}
+            '{{idx}}', 
+            {% endfor %}
+        ],
+        crosshair: true
+    },
+    yAxis: {
+        min: 0,
+        title: {
+            text: 'Count'
+        }
+    },
+    tooltip: {
+        headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
+        pointFormat: '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' +
+            '<td style="padding:0"><b>{point.y:.0f}</b></td></tr>',
+        footerFormat: '</table>',
+        shared: true,
+        useHTML: true
+    },
+    plotOptions: {
+        column: {
+            pointPadding: 0.2,
+            borderWidth: 0
+        }
+    },
+    series: [
+        {% for idx, column in customer_depth_df.iterrows() %}
+        {
+            name: "{{idx}}", 
+            data: [
+                {% for e in column %}
+                {{e}},
+                {% endfor %}
+            ]
+        }, 
+        {% endfor %}
+    ]
+});
+
+</script>
+{% endblock %}

@@ -2358,6 +2358,175 @@ def reportDashboardStart():
         types = types, 
     )
 
+@app.route('/report/product/start')
+@login_required(['ES', 'DE'])
+def reportByProductStart():
+    user = getUserById(login_session['id'])
+    result = session.query(
+            Sellin
+        ).filter(
+            Sellin.country == user.country
+        ).order_by(
+            Sellin.date.desc()
+        ).first()
+    report_day_start = date(result.date.year, 1, 1)
+    last_day = monthrange(result.date.year, result.date.month)[1]
+    report_day_end = date(result.date.year, result.date.month, last_day)
+    report_range = (report_day_start, report_day_end)
+    result = session.query(
+            Account.type.distinct(), 
+        ).filter(
+            Account.country == user.country
+        ).all()
+    types = [e[0] for e in result]
+    types.remove('TP-LINK')
+    types.remove('DISTRIBUTOR')
+    result = session.query(
+            Product.category.label('category'), 
+            Product.sub_category.label('sub_category'), 
+            Product.sku.label('sku'), 
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    categories = result_df['category'].drop_duplicates()
+    sub_categories = result_df['sub_category'].drop_duplicates()
+    skus = result_df['sku'].drop_duplicates()
+    return render_template(
+        'report_by_product_start.html', 
+        login = login_session, 
+        report_range = report_range, 
+        types = types, 
+        categories = categories, 
+        sub_categories = sub_categories, 
+        skus = skus, 
+    )
+
+@app.route('/report/product')
+@login_required(['ES', 'DE'])
+def reportByProduct():
+    user = getUserById(login_session['id'])
+    date_start = request.args.get('start')
+    date_start = parsing_date(date_start)
+    date_end = request.args.get('end')
+    date_end = parsing_date(date_end)
+    this_year = date_end.year
+    report_range = (date_start, date_end)
+    account_types = request.args.getlist('type')
+    threshold = int(request.args.get('threshold'))
+    sku = request.args.get('sku')
+    category = request.args.get('category')
+    sub_category = request.args.get('sub-category')
+    account_ids = session.query(
+            Account.id
+        ).filter(
+            Account.type.in_(account_types), 
+            Account.country == user.country, 
+        )
+    result = session.query(
+            Product.id
+        )
+    if sku:
+        product_ids = result.filter(
+                Product.sku == sku
+            )
+    if category:
+        product_ids = result.filter(
+                Product.category == category
+            )
+    if sub_category:
+        product_ids = result.filter(
+                Product.sub_category == sub_category
+            )
+    result = session.query(
+            extract('year', Sellin.date).label('year'), 
+            extract('month', Sellin.date).label('month'), 
+            Sellin.account_id.label('account_id'), 
+            func.sum(Sellin.unit_price * Sellin.qty).label('revenue'), 
+            func.sum(Sellin.qty).label('qty'), 
+        ).filter(
+            Sellin.account_id.in_(account_ids), 
+            Sellin.country == user.country, 
+            Sellin.product_id.in_(product_ids), 
+        ).group_by(
+            'year', 'month', 'account_id'
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    result_df['month'] = result_df['month'].astype(int)
+    result_df['year'] = result_df['year'].astype(int)
+    monthview_df = pd.pivot_table(
+            result_df, 
+            values=['revenue', 'qty'], 
+            columns=['year'], 
+            index=['month'], 
+            aggfunc=np.sum, 
+            fill_value=0
+        )
+    customer_width_df = result_df[result_df['qty']>=1]
+    customer_width_df = pd.pivot_table(
+            customer_width_df, 
+            values = 'account_id', 
+            index = ['year'], 
+            columns = ['month'], 
+            aggfunc = 'count', 
+            fill_value=0, 
+        )
+    customer_depth_df = result_df[result_df['qty']>=threshold]
+    customer_depth_df = pd.pivot_table(
+            customer_depth_df, 
+            values = 'account_id', 
+            index = ['year'], 
+            columns = ['month'], 
+            aggfunc = 'count', 
+            fill_value=0, 
+        )
+    result = session.query(
+            extract('year', Sellin.date).label('year'), 
+            Sellin.account_id.label('account_id'), 
+            func.sum(Sellin.unit_price * Sellin.qty).label('revenue'), 
+            func.sum(Sellin.qty).label('qty'), 
+        ).filter(
+            Sellin.country == user.country,
+            Sellin.account_id.in_(account_ids), 
+            Sellin.product_id.in_(product_ids), 
+            extract('year', Sellin.date) >= this_year-1, 
+            extract('month', Sellin.date) >= date_start.month, 
+            extract('month', Sellin.date) <= date_end.month, 
+        )
+    result = result.group_by(
+            'account_id', 'year'
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    result_df['year'] = result_df['year'].astype(int)
+    progress_df = pd.pivot_table(
+            result_df, 
+            values='qty', 
+            columns=['year'], 
+            index=['account_id'], 
+            aggfunc=np.sum, 
+            fill_value=0
+        )
+    progress_df['gap'] = progress_df[this_year] - progress_df[this_year-1]
+    progress_df['weight'] = progress_df[this_year] + progress_df[this_year-1]
+    progress_df.sort_values(by=['weight'], ascending=False, inplace=True)
+    progress_df.drop(columns=['weight'], inplace=True)
+    progress_df = progress_df.head(50)
+    result = session.query(
+            Account.id.label('account_id'), 
+            Account.name.label('account_name')
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    progress_df = progress_df.merge(result_df, on='account_id')
+    return render_template(
+        'report_by_product.html', 
+        login = login_session, 
+        date_start = date_start, 
+        date_end = date_end, 
+        customer_width_df = customer_width_df, 
+        customer_depth_df = customer_depth_df, 
+        monthview_df = monthview_df, 
+        progress_df = progress_df, 
+        report_range = report_range, 
+    )
+
 @app.route('/report/dashboard')
 @login_required(['ES', 'DE'])
 def reportDashboard():
