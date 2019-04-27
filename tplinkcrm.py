@@ -3188,135 +3188,193 @@ def viewAccount(account_id):
     account_contact_df.rename(columns = {
             'name': 'contact_name', 
         }, inplace = True)
-    result = session.query(
-            extract('year', Sellin.date).label('year'), 
-            extract('month', Sellin.date).label('month'), 
-            func.sum(Sellin.unit_price * Sellin.qty).label('revenue'), 
-        ).filter(
-            Sellin.account_id == account_id,
-            Sellin.country == user.country,
-        ).group_by(
-            'year', 'month'
-        )
-    result_df = pd.read_sql(result.statement, result.session.bind)
-    result_df['month'] = result_df['month'].astype(int)
-    result_df['year'] = result_df['year'].astype(int)
-    monthview_df = pd.pivot_table(
-            result_df, 
-            values='revenue', 
-            index=['year'], 
-            columns=['month'], 
-            aggfunc=np.sum, 
-            fill_value=0
-        )
-    monthview_df['Total'] = monthview_df.sum(axis=1)
-    result = session.query(
-            extract('year', Sellin.date).label('year'), 
-            Product.sku.label('sku'), 
-            Sellin.distri_id.label('distri_id'), 
-            Product.category.label('category'), 
-            Product.sub_category.label('sub_category'), 
-            func.sum(Sellin.unit_price * Sellin.qty).label('revenue'), 
-            func.sum(Sellin.qty).label('qty'), 
-        ).filter(
-            Sellin.account_id == account_id,
-            Sellin.country == user.country,
-            Sellin.product_id == Product.id,
-            extract('month', Sellin.date) >= date_start.month, 
-            extract('month', Sellin.date) <= date_end.month, 
-        ).group_by(
-            'year', 'category', 'sub_category', 'sku', 'distri_id', 
-        )
-    result_df = pd.read_sql(result.statement, result.session.bind)
-    result_df['year'] = result_df['year'].astype(int)
-    overview_df = pd.pivot_table(
-            result_df, 
-            values='revenue', 
-            columns=[], 
-            index=['year'], 
-            aggfunc=np.sum, 
-            fill_value=0
-        )
-    category_df = pd.pivot_table(
-            result_df, 
-            values='revenue', 
-            columns=['year'], 
-            index=['category'], 
-            aggfunc=np.sum, 
-            fill_value=0
-        )
-    category_df['weight'] = category_df.sum(axis=1)
-    category_df.sort_values(by=['weight'], ascending=False, inplace=True)
-    category_df.drop(columns=['weight'], inplace=True)
-    category_df = category_df.head(10)
-    sub_category_df = pd.pivot_table(
-            result_df, 
-            values='revenue', 
-            columns=['year'], 
-            index=['sub_category'], 
-            aggfunc=np.sum, 
-            fill_value=0
-        )
-    sub_category_df['weight'] = sub_category_df.sum(axis=1)
-    sub_category_df.sort_values(by=['weight'], ascending=False, inplace=True)
-    sub_category_df.drop(columns=['weight'], inplace=True)
-    sub_category_df = sub_category_df.head(10)
-    sku_df = pd.pivot_table(
-            result_df, 
-            values=['revenue', 'qty'], 
-            columns=['year'], 
-            index=['sku'], 
-            aggfunc=np.sum, 
-            fill_value=0
-        )
-    sku_df['weight'] = sku_df.sum(axis=1)
-    sku_df.sort_values(by=['weight'], ascending=False, inplace=True)
-    sku_df.drop(columns=['weight'], inplace=True)
-    sku_df = sku_df.head(10)
-    distri_df = pd.pivot_table(
-            result_df, 
-            values='revenue', 
-            columns=['year'], 
-            index=['distri_id'], 
-            aggfunc=np.sum, 
-            fill_value=0
-        )
-    distri_df['weight'] = distri_df.sum(axis=1)
-    distri_df.sort_values(by=['weight'], ascending=False, inplace=True)
-    distri_df.drop(columns=['weight'], inplace=True)
-    if not distri_df.empty:
-        result = session.query(
-                Account.id.label('distri_id'), 
-                Account.name.label('distributor'),
-            ).filter(
-                Account.country == user.country, 
-            )
-        result_df = pd.read_sql(result.statement, result.session.bind)
-        distri_df = distri_df.merge(result_df, on='distri_id', how='left')
-        distri_df.set_index('distributor',inplace=True)
-        distri_df.drop(columns=['distri_id'], inplace=True)
     managers = session.query(
             User
         ).filter(
             User.country == user.country
         )
-    return render_template(
-            'view_account.html', 
-            login = login_session, 
-            account = account, 
-            monthview_df = monthview_df, 
-            overview_df = overview_df, 
-            category_df = category_df, 
-            sub_category_df = sub_category_df, 
-            sku_df = sku_df, 
-            distri_df = distri_df, 
-            date_start = date_start, 
-            date_end = date_end, 
-            account_note_df = account_note_df, 
-            account_contact_df = account_contact_df, 
-            managers = managers, 
-            user = user, 
-        )
+    if account.type == 'DISTRIBUTOR':
+        threshold = request.args.get('threshold')
+        account_ids = session.query(
+                Account.id
+            ).filter(
+                Account.country == user.country, 
+            )
+        result = session.query(
+                extract('year', Sellin.date).label('year'), 
+                extract('month', Sellin.date).label('month'), 
+                Sellin.account_id.label('account_id'), 
+                func.sum(Sellin.qty*Sellin.unit_price).label('revenue'), 
+                func.sum(Sellin.qty).label('qty'), 
+            ).filter(
+                Sellin.distri_id == account_id, 
+                Sellin.country == user.country, 
+                Sellin.account_id.in_(account_ids), 
+            ).group_by(
+                'year', 'month', 'account_id'
+            )
+        result_df = pd.read_sql(result.statement, result.session.bind)
+        customer_width_df = result_df[result_df['qty']>=1]
+        customer_width_df = pd.pivot_table(
+                customer_width_df, 
+                values = 'account_id', 
+                index = ['year'], 
+                columns = ['month'], 
+                aggfunc = 'count', 
+                fill_value=0, 
+            )
+        if threshold:
+            threshold = int(threshold)
+        else:
+            threshold = 5
+        customer_depth_df = result_df[result_df['qty']>=threshold]
+        customer_depth_df = pd.pivot_table(
+                customer_depth_df, 
+                values = 'account_id', 
+                index = ['year'], 
+                columns = ['month'], 
+                aggfunc = 'count', 
+                fill_value=0, 
+            )
+        return render_template(
+                'view_distributor.html', 
+                login = login_session, 
+                account = account, 
+                date_start = date_start, 
+                date_end = date_end, 
+                account_note_df = account_note_df, 
+                account_contact_df = account_contact_df, 
+                managers = managers, 
+                user = user, 
+                customer_width_df = customer_width_df, 
+                customer_depth_df = customer_depth_df, 
+            )
+    # Not distributor
+    else:
+        result = session.query(
+                extract('year', Sellin.date).label('year'), 
+                extract('month', Sellin.date).label('month'), 
+                func.sum(Sellin.unit_price * Sellin.qty).label('revenue'), 
+            ).filter(
+                Sellin.account_id == account_id,
+                Sellin.country == user.country,
+            ).group_by(
+                'year', 'month'
+            )
+        result_df = pd.read_sql(result.statement, result.session.bind)
+        result_df['month'] = result_df['month'].astype(int)
+        result_df['year'] = result_df['year'].astype(int)
+        monthview_df = pd.pivot_table(
+                result_df, 
+                values='revenue', 
+                index=['year'], 
+                columns=['month'], 
+                aggfunc=np.sum, 
+                fill_value=0
+            )
+        monthview_df['Total'] = monthview_df.sum(axis=1)
+        result = session.query(
+                extract('year', Sellin.date).label('year'), 
+                Product.sku.label('sku'), 
+                Sellin.distri_id.label('distri_id'), 
+                Product.category.label('category'), 
+                Product.sub_category.label('sub_category'), 
+                func.sum(Sellin.unit_price * Sellin.qty).label('revenue'), 
+                func.sum(Sellin.qty).label('qty'), 
+            ).filter(
+                Sellin.account_id == account_id,
+                Sellin.country == user.country,
+                Sellin.product_id == Product.id,
+                extract('month', Sellin.date) >= date_start.month, 
+                extract('month', Sellin.date) <= date_end.month, 
+            ).group_by(
+                'year', 'category', 'sub_category', 'sku', 'distri_id', 
+            )
+        result_df = pd.read_sql(result.statement, result.session.bind)
+        result_df['year'] = result_df['year'].astype(int)
+        overview_df = pd.pivot_table(
+                result_df, 
+                values='revenue', 
+                columns=[], 
+                index=['year'], 
+                aggfunc=np.sum, 
+                fill_value=0
+            )
+        category_df = pd.pivot_table(
+                result_df, 
+                values='revenue', 
+                columns=['year'], 
+                index=['category'], 
+                aggfunc=np.sum, 
+                fill_value=0
+            )
+        category_df['weight'] = category_df.sum(axis=1)
+        category_df.sort_values(by=['weight'], ascending=False, inplace=True)
+        category_df.drop(columns=['weight'], inplace=True)
+        category_df = category_df.head(10)
+        sub_category_df = pd.pivot_table(
+                result_df, 
+                values='revenue', 
+                columns=['year'], 
+                index=['sub_category'], 
+                aggfunc=np.sum, 
+                fill_value=0
+            )
+        sub_category_df['weight'] = sub_category_df.sum(axis=1)
+        sub_category_df.sort_values(by=['weight'], ascending=False, inplace=True)
+        sub_category_df.drop(columns=['weight'], inplace=True)
+        sub_category_df = sub_category_df.head(10)
+        sku_df = pd.pivot_table(
+                result_df, 
+                values=['revenue', 'qty'], 
+                columns=['year'], 
+                index=['sku'], 
+                aggfunc=np.sum, 
+                fill_value=0
+            )
+        sku_df['weight'] = sku_df.sum(axis=1)
+        sku_df.sort_values(by=['weight'], ascending=False, inplace=True)
+        sku_df.drop(columns=['weight'], inplace=True)
+        sku_df = sku_df.head(10)
+        distri_df = pd.pivot_table(
+                result_df, 
+                values='revenue', 
+                columns=['year'], 
+                index=['distri_id'], 
+                aggfunc=np.sum, 
+                fill_value=0
+            )
+        distri_df['weight'] = distri_df.sum(axis=1)
+        distri_df.sort_values(by=['weight'], ascending=False, inplace=True)
+        distri_df.drop(columns=['weight'], inplace=True)
+        if not distri_df.empty:
+            result = session.query(
+                    Account.id.label('distri_id'), 
+                    Account.name.label('distributor'),
+                ).filter(
+                    Account.country == user.country, 
+                )
+            result_df = pd.read_sql(result.statement, result.session.bind)
+            distri_df = distri_df.merge(result_df, on='distri_id', how='left')
+            distri_df.set_index('distributor',inplace=True)
+            distri_df.drop(columns=['distri_id'], inplace=True)
+        return render_template(
+                'view_account.html', 
+                login = login_session, 
+                account = account, 
+                monthview_df = monthview_df, 
+                overview_df = overview_df, 
+                category_df = category_df, 
+                sub_category_df = sub_category_df, 
+                sku_df = sku_df, 
+                distri_df = distri_df, 
+                date_start = date_start, 
+                date_end = date_end, 
+                account_note_df = account_note_df, 
+                account_contact_df = account_contact_df, 
+                managers = managers, 
+                user = user, 
+            )
 
 @app.route('/manager/<int:manager_id>')
 @login_required(['ES', 'DE'])
