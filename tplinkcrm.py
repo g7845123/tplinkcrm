@@ -4001,7 +4001,7 @@ class AccountNoteView(ModelView):
 class PackingListView(ModelView):
     column_filters = ['so', 'ready_date', 'shipped_date', 'invoice_date']
 
-app.secret_key = 'super_secret_key'
+app.secret_key = SECRET_KEY
 app.debug = True
 admin = Admin(app, name='tplink')
 admin.add_view(ModelView(User, session))
