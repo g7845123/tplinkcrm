@@ -259,7 +259,6 @@ def plUpload():
             login = login_session, 
         )
     pl_file = request.files.get('pl-file')
-    pl_df = pd.read_excel(pl_file, converters={'Tracking Number': str, 'SO': str})
     # pl_df = pl_df.fillna('')
     # Check whether header in submission is ok
     # required_header = pd.Series(['Customer', 'PI', 'SO','PL Date', 'Promised Date', 'Ready Date', 'Invoice Date', 'Truck ID', 'Required Date', 'Tracking Number'])
@@ -267,7 +266,6 @@ def plUpload():
     pl_df['Customer'] = pl_df['Customer'].apply(lambda x: x.strip().upper())
     pl_df['SO'] = pl_df['SO'].apply(lambda x: str(x).strip().upper())
     pl_df['PL Date'] = pl_df['PL Date'].apply(parsing_date)
-    pl_df['Promised Date'] = pl_df['Promised Date'].apply(parsing_date)
     pl_df['Ready Date'] = pl_df['Ready Date'].apply(parsing_date)
     pl_df['Invoice Date'] = pl_df['Invoice Date'].apply(parsing_date)
     pl_df['Shipped Date'] = pl_df['Shipped Date'].apply(parsing_date)
@@ -287,8 +285,6 @@ def plUpload():
             pl.pi = row['PI']
             pl.so = row['SO']
             pl.pl_date = row['PL Date']
-        if not pd.isnull(row['Promised Date']):
-            pl.promised_date = row['Promised Date']
         if not pd.isnull(row['Ready Date']):
             pl.ready_date = row['Ready Date']
         if not pd.isnull(row['Shipped Date']):
@@ -297,10 +293,6 @@ def plUpload():
             pl.invoice_date = row['Invoice Date']
         if not pd.isnull(row['Required Date']):
             pl.required_date = row['Required Date']
-        if not pd.isnull(row['Truck ID']):
-            pl.truck_id = row['Truck ID']
-        if not pd.isnull(row['Tracking Number']):
-            pl.pl_name = row['Tracking Number']
         session.add(pl)
         session.commit()
     flash('Successfully uploaded')
