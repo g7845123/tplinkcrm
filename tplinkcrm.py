@@ -112,14 +112,14 @@ def send_email(user, pwd, recipient, subject, body, cc=None, files=None):
     s.quit()
 
 def parsing_date(x):
-    if pd.isnull(x) or type(x) in [pd.Timestamp, datetime]:
+    if type(x) in [pd.Timestamp, datetime]:
         return x
     for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%d.%m.%Y'):
         try:
             return datetime.strptime(x, fmt)
-        except ValueError:
+        except:
             pass
-    return 'ERROR'
+    return None
 
 def get_unmapped_account(account_names, country):
     result = session.query(
@@ -224,6 +224,31 @@ def operationalDashboard():
         open_pls = open_pls, 
         closed_pls = closed_pls, 
     )
+
+@app.route('/operational/pl-upload-check', methods=['POST'])
+@login_required(['admin'])
+def plUploadCheck():
+    user = getUserById(login_session['id'])
+    response = {}
+    pl_file = request.files.get('pl-file')
+    pl_df = pd.read_excel(pl_file)
+    # Check whether header in submission is ok
+    required_header = pd.Series(['Customer', 'PI', 'SO', 'PL Date', 'Ready Date', 'Shipped Date', 'Invoice Date', 'Required Date', 'Urgent'])
+    header_err = required_header[~required_header.isin(pl_df.columns)]
+    if not header_err.empty:
+        response['header'] = header_err.to_dict()
+        return simplejson.dumps(response)
+    else:
+        response['header'] = 'pass'
+    # Check whether date in submission is ok
+    date_col = pl_df['PL Date'].apply(parsing_date)
+    date_err = date_col[pd.isnull(date_col)]
+    if not date_err.empty: 
+        response['date'] = date_err.to_dict()
+        return simplejson.dumps(response, default=str)
+    else:
+        response['date'] = 'pass'
+    return simplejson.dumps(response)
 
 @app.route('/operational/pl-upload', methods=['GET', 'POST'])
 @login_required(['ES', 'DE'])

@@ -7,9 +7,73 @@
 <form class="form-horizontal" action="#" method="POST" enctype="multipart/form-data">
     <p>Please use the exact <a href="{{url_for('static', filename='download/pl_template.xlsx')}}">template</a> to upload data. </p>
     <p>Important: Date format can be be yyyy-mm-dd, or dd/mm/yyyy, or dd.mm.yyyy</p>
-    <input type="file" class="form-control-file" name="pl-file">
+    <input type="file" class="form-control-file" name="pl-file" id="pl-file">
     <br>
-    <button type="submit" value="Upload" class="btn btn-primary" id="submit">Submit</button>
+    <h2>Header Check</h2>
+    <div id="header-response"></div>
+    <h2>Date Check</h2>
+    <div id="date-response"></div>
+    <button type="submit" value="Upload" class="btn btn-primary" id="submit" style="display:none;" onclick="changeSubmissionState()">Submit</button>
 </form>
 
+{% endblock %}
+
+{% block script %}
+<script>
+$('form').submit(function() {
+    $(this).find("button[type='submit']").html('Uploading');
+    $(this).find("button[type='submit']").prop('disabled',true);
+});
+$(document).on('change','#pl-file' , function(){ 
+    $('#upload-status').html('<div class="alert alert-info">Checking uploaded file, please wait</div>');
+    var plForm = new FormData();
+    plForm.append('pl-file', $('#pl-file').prop('files')[0]);
+    var plRequest = new XMLHttpRequest();
+    plRequest.open("POST", "/operational/pl-upload-check");
+    plRequest.send(plForm);
+    plRequest.onreadystatechange = function() {
+        if(this.readyState == 4 && this.status == 200) {
+            $('#upload-status').html('<div class="alert alert-success">Uploading completed</div>');
+            plResponse = JSON.parse(plRequest.response);
+            // Header check
+            if(plResponse.header == 'pass') {
+                $('#header-response').html('<div class="alert alert-success">Header check - ok</div>');
+                
+            }
+            else if(!plResponse.header){
+                $('#header-response').text('Please fix the error above to perform header check.');
+            }
+            else {
+                $('#header-response').html('<div class="alert alert-danger">Please include the following columns into submission (Header must be with the exact name)</div>');
+                for (var i in plResponse.header) {
+                    $('#header-response').append('<div>'+ plResponse.header[i] +'</div>');
+                }
+                $('#pl-file').val('');
+            }
+            // Date check
+            if(plResponse.date == 'pass') {
+                $('#date-response').html('<div class="alert alert-success">Date check - ok</div>');
+            }
+            else if(!plResponse.date){
+                $('#date-response').text('Please fix the error above to perform date check');
+            }
+            else {
+                $('#date-response').html('<div class="alert alert-danger">Error in parsing date with the following entries. Date must be the format yyyy-mm-dd, or dd/mm/yyyy, or dd.mm.yyyy');
+                for (var i in plResponse.date) {
+                    $('#date-response').append('<div>Line '+ (parseInt(i)+2) + ': ' + plResponse.date[i] +'</div>');
+                }
+                $('#pl-file').val('');
+            }
+            if (
+                plResponse.header == 'pass' && 
+                plResponse.date == 'pass'
+            ) {
+                $('#submit').show();
+            }
+        } else {
+            $('#upload-status').html('Error in submitting, please retry. If the problem exists, please contact james.guo@tp-link.com');
+        }
+    } // plRequest.onreadystatechange
+}); // On change
+</script>
 {% endblock %}
