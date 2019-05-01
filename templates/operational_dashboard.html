@@ -102,7 +102,6 @@
             <th>Promised Date</th>
             <th>Ready Date</th>
             <th>Truck ID</th>
-            <th>Tracking ID</th>
             <th>Required Date</th>
             <th>Shipped Date</th>
             <th>Invoice Date</th>
@@ -118,7 +117,6 @@
             <td>{{closed_pl['promised_date']}}</td>
             <td>{{closed_pl['ready_date']}}</td>
             <td>{{closed_pl['truck_id']}}</td>
-            <td>{{closed_pl['pl_name']}}</td>
             {% if closed_pl['required_date'] %}
             <td>{{closed_pl['required_date'].strftime('%Y-%m-%d')}}</td>
             {% else %}
