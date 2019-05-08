@@ -3,7 +3,7 @@ reset_password_request_email = """
   <head></head>
   <body>
     <p>Dear user, </p>
-    <p>You have requested to reset your password, please click <a href="http://www.tplinkcrm.com/reset?uid={}&token={}">here</a> to continue.</p>
+    <p>You have requested to reset your password, please click <a href="http://www.tplinkcrm.com/reset?uid={uid}&token={token}">here</a> to continue.</p>
     <br>
     <p>
         Best Regards, <br>
