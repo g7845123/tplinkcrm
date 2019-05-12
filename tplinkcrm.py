@@ -89,6 +89,9 @@ class PriceRecord(object):
     def __mul__(self, other):
         return PriceRecord(int(self.price * other), self.link)
 
+    def __truediv__(self, other):
+        return PriceRecord(self.price / other, self.link)
+
     def __add__(self, other):
         return PriceRecord(self.price + other, self.link)
 
@@ -1693,6 +1696,43 @@ def StockHistory():
         sku = sku, 
         stock_dict = stock_dict, 
         role_dict = role_dict, 
+    )
+
+@app.route('/price/query', methods=['GET', 'POST'])
+@login_required(['ES', 'DE'])
+def priceQuery():
+    products = session.query(
+            Product
+        ).all()
+    return render_template(
+        'price_query.html', 
+        login = login_session, 
+        products = products, 
+    )
+
+@app.route('/price/query/result', methods=['POST'])
+@login_required(['ES', 'DE'])
+def priceQueryResult():
+    user = getUserById(login_session['id'])
+    skus = request.form.get('skus').splitlines()
+    skus = [sku.upper() for sku in skus if sku]
+    price_df = pd.DataFrame(skus)
+    price_df.columns = ['original_sku']
+    result = session.query(
+            SkuToProduct.sku.label('original_sku'), 
+            Product.id.label('product_id'), 
+        ).filter(
+            Product.id == SkuToProduct.product_id, 
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    price_df = price_df.merge(result_df, on='original_sku', how='left')
+    accounts, low_flag, result_df = get_price_info(user.country)
+    price_df = price_df.merge(result_df, on='product_id', how='left')
+    return render_template(
+        'price_query_result.html', 
+        login = login_session, 
+        accounts = accounts,   
+        price_df = price_df, 
     )
 
 @app.route('/stock/query/result', methods=['POST'])

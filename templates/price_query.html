@@ -1,0 +1,45 @@
+{% extends "template.html" %}
+
+{% block head %}
+<link href="{{url_for('static', filename='css/select2.min.css')}}" rel="stylesheet" />
+{% endblock %}
+
+{% block content %}
+    <h1 class="page-header">
+        View Price
+    </h1>
+    <h2>
+        Query by single SKU
+    </h2>
+    <select id="sku">
+        <option></option>
+        {% for product in products %}
+        <option value={{product.id}}>{{product.sku}}</option>
+        {% endfor%}
+    </select>
+    <h2>
+        Batch query
+    </h2>
+    <form class="form-horizontal" method="POST" action="/price/query/result">
+        <textarea class="form-control" id="skus" name="skus"></textarea>
+        <center>
+            <button type="submit" class="btn btn-primary" id="submit">Submit</button>
+        </center>
+    </form>
+{% endblock %}
+
+{% block script%}
+<!-- Resources -->
+<script src="{{url_for('static', filename='js/select2.min.js')}}"></script>
+
+<script>
+var select2 = $("#sku").select2({
+    placeholder: "Select a product",
+});
+select2.on("select2:select", function () { 
+    var sku = $("#sku").select2("data")[0].text;
+    $("#skus").text(sku);
+    $("#submit").click();
+});
+</script>
+{% endblock %}

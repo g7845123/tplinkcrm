@@ -1,0 +1,32 @@
+{% extends "template.html" %}
+
+{% block content %}
+<h1 class="page-header">
+    View Price
+</h1>
+<table class="table table-striped">
+    <thead>
+      <tr>
+        <th>SKU</th>
+        {% for account in accounts %}
+        <th>{{account}}</th> 
+        {% endfor %}
+        <th>History</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for idx, data in price_df.iterrows() %}
+      <tr>
+        <td>{{data['original_sku']}}</td>
+        {% for account in accounts %}
+        <td><a href="{{data[account].link}}" target="_blank">{{data[account]/100}}</a></td>
+        {% endfor %}
+        <td><a href="/price/history?product={{data['product_id']}}">History</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}
+
+{% block script%}
+{% endblock %}
