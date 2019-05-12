@@ -2164,6 +2164,134 @@ def uploadStock():
 #             login = login_session, 
 #         )
 
+@app.route('/account/upload-check', methods=['POST'])
+@login_required(['admin'])
+def accountUploadCheck():
+    user = getUserById(login_session['id'])
+    response = {}
+    account_file = request.files.get('account-file')
+    account_df = pd.read_excel(account_file, converters={'Postcode': str})
+    # Check whether header in submission is ok
+    required_header = pd.Series(['Tax', 'Name', 'Street', 'Postcode', 'City'])
+    header_err = required_header[~required_header.isin(account_df.columns)]
+    if not header_err.empty:
+        response['header'] = header_err.to_dict()
+        return simplejson.dumps(response)
+    else:
+        response['header'] = 'pass'
+    account_df.rename(columns = {
+            'Tax': 'tax', 
+            'Name': 'name', 
+            'Street': 'street', 
+            'Postcode': 'postcode', 
+            'City': 'city', 
+        }, inplace = True)
+    account_df['tax'] = account_df['tax'].apply(lambda x: x.strip().upper())
+    account_df['name'] = account_df['name'].apply(lambda x: x.strip().upper())
+    account_df['name'] = account_df['name'].apply(lambda x: re.sub('\s+', ' ', x))
+    account_df['street'] = account_df['street'].apply(lambda x: x.strip().upper())
+    account_df['postcode'] = account_df['postcode'].apply(lambda x: x.strip().upper())
+    account_df['city'] = account_df['city'].apply(lambda x: x.strip().upper())
+    # Check whether all customers are mapped
+    account_names = pd.unique(account_df['name'])
+    account_names = pd.Series(account_names)
+    unmapped_accounts = get_unmapped_account(account_names, user.country)
+    if not unmapped_accounts.empty:
+        response['customer'] = unmapped_accounts.to_dict()
+        return simplejson.dumps(response)
+    else: 
+        response['customer'] = 'pass'
+    return simplejson.dumps(response)
+
+@app.route('/account/upload', methods=['GET', 'POST'])
+@login_required(['admin'])
+def uploadCustomer():
+    user = getUserById(login_session['id'])
+    if request.method == 'POST':
+        # Request comes from unmapped-customer
+        unmapped_customers = request.form.get('unmapped-customer')
+        if unmapped_customers:
+            unmapped_customers = pd.read_json(unmapped_customers, typ='series')
+            for unmapped_customer in unmapped_customers:
+                count1 = session.query(
+                    Account
+                ).filter(
+                    Account.name == unmapped_customer, 
+                    Account.country == user.country, 
+                ).count()
+                count2 = session.query(
+                    NameToAccount
+                ).filter(
+                    NameToAccount.name == unmapped_customer, 
+                    NameToAccount.country == user.country,
+                ).count()
+                if count1 == 0 and count2 == 0:
+                    newAccount = Account(
+                        name = unmapped_customer, 
+                        country = user.country, 
+                        type = 'UNCATEGORIZED', 
+                    )
+                    session.add(newAccount)
+                    newNameToAccount = NameToAccount(
+                        name = unmapped_customer, 
+                        country = user.country, 
+                        account = newAccount, 
+                    )
+                    session.add(newNameToAccount)
+                    session.commit()
+            flash('Accounts added, you can upload data now')
+            return "pass"
+        # Request comes from file upload
+        account_file = request.files.get('account-file')
+        account_df = pd.read_excel(account_file, converters={'Postcode': str})
+        raw_row_count = account_df.shape[0]
+        account_df.rename(columns = {
+                'Tax': 'tax', 
+                'Name': 'name', 
+                'Street': 'street', 
+                'Postcode': 'postcode', 
+                'City': 'city', 
+            }, inplace = True)
+        account_df['tax'] = account_df['tax'].apply(lambda x: x.strip().upper())
+        account_df['name'] = account_df['name'].apply(lambda x: x.strip().upper())
+        account_df['name'] = account_df['name'].apply(lambda x: re.sub('\s+', ' ', x))
+        account_df['street'] = account_df['street'].apply(lambda x: x.strip().upper())
+        account_df['postcode'] = account_df['postcode'].apply(lambda x: x.strip().upper())
+        account_df['city'] = account_df['city'].apply(lambda x: x.strip().upper())
+        result = session.query(
+                NameToAccount.name.label('name'), 
+                NameToAccount.account_id.label('account_id')
+            ).filter(
+                NameToAccount.country == user.country
+            )
+        result_df = pd.read_sql(result.statement, result.session.bind)
+        account_df = account_df.merge(result_df, on='name', how='left')
+        assert account_df.shape[0] == raw_row_count
+        for index, row in account_df.iterrows():
+            account = session.query(
+                    Account
+                ).filter(
+                    Account.id == row['account_id'], 
+                ).first()
+            if not account.street and row['street']:
+                account.street = row['street']
+            if not account.postcode and row['postcode']:
+                account.postcode = row['postcode']
+            if not account.city and row['city']:
+                account.city = row['city']
+            if not account.tax and row['tax']:
+                account.tax = row['tax']
+            session.add(account)
+        session.commit()
+        flash('Successfully uploaded')
+        return redirect('/')
+    else:
+        return render_template(
+            'account_upload.html', 
+            login = login_session, 
+            user = user, 
+        )
+
 @app.route('/sellin/upload-check', methods=['POST'])
 @login_required(['admin'])
 def sellinUploadCheck():
@@ -2189,7 +2317,7 @@ def sellinUploadCheck():
         }, inplace = True)
     sellin_df['distributor'] = sellin_df['distributor'].apply(lambda x: x.strip().upper())
     sellin_df['customer'] = sellin_df['customer'].apply(lambda x: x.strip().upper())
-    sellin_df['customer'] = sellin_df['customer'].apply(lambda x: re.sub(' +', ' ', x))
+    sellin_df['customer'] = sellin_df['customer'].apply(lambda x: re.sub('\s+', ' ', x))
     sellin_df['sku'] = sellin_df['sku'].apply(lambda x: str(x).strip().upper())
     # Check whether unit price in submission is ok
     unit_price_col = pd.to_numeric(sellin_df['unit_price'], errors='coerce')
@@ -2296,7 +2424,7 @@ def uploadSellin():
             }, inplace = True)
         sellin_df['distributor'] = sellin_df['distributor'].apply(lambda x: x.strip().upper())
         sellin_df['customer'] = sellin_df['customer'].apply(lambda x: x.strip().upper())
-        sellin_df['customer'] = sellin_df['customer'].apply(lambda x: re.sub(' +', ' ', x))
+        sellin_df['customer'] = sellin_df['customer'].apply(lambda x: re.sub('\s+', ' ', x))
         sellin_df['sku'] = sellin_df['sku'].apply(lambda x: str(x).strip().upper())
         sellin_df['unit_price'] = pd.to_numeric(sellin_df['unit_price'])
         sellin_df['qty'] = pd.to_numeric(sellin_df['qty'])
@@ -3553,51 +3681,6 @@ def UploadDistriCost():
     else:
         return render_template(
             'distri_cost_upload.html', 
-            login = login_session, 
-        )
-
-@app.route('/account/upload', methods=['GET', 'POST'])
-@login_required(['admin'])
-def uploadCustomer():
-    user = getUserById(login_session['id'])
-    if request.method == 'POST':
-        unmapped_customers = request.form.get('unmapped-customer')
-        # Request comes from sellin_upload.html
-        if unmapped_customers:
-            unmapped_customers = pd.read_json(unmapped_customers, typ='series')
-            for unmapped_customer in unmapped_customers:
-                count1 = session.query(
-                    Account
-                ).filter(
-                    Account.name == unmapped_customer, 
-                    Account.country == user.country, 
-                ).count()
-                count2 = session.query(
-                    NameToAccount
-                ).filter(
-                    NameToAccount.name == unmapped_customer, 
-                    NameToAccount.country == user.country,
-                ).count()
-                if count1 == 0 and count2 == 0:
-                    newAccount = Account(
-                        name = unmapped_customer, 
-                        country = user.country, 
-                        type = 'UNCATEGORIZED', 
-                    )
-                    session.add(newAccount)
-                    newNameToAccount = NameToAccount(
-                        name = unmapped_customer, 
-                        country = user.country, 
-                        account = newAccount, 
-                    )
-                    session.add(newNameToAccount)
-                    session.commit()
-            flash('Accounts added, you can upload data now')
-            return "pass"
-        return redirect('/')
-    else:
-        return render_template(
-            'account_upload.html', 
             login = login_session, 
         )
 
