@@ -262,10 +262,8 @@ def plUpload():
             login = login_session, 
         )
     pl_file = request.files.get('pl-file')
-    # pl_df = pl_df.fillna('')
+    pl_df = pd.read_excel(pl_file)
     # Check whether header in submission is ok
-    # required_header = pd.Series(['Customer', 'PI', 'SO','PL Date', 'Promised Date', 'Ready Date', 'Invoice Date', 'Truck ID', 'Required Date', 'Tracking Number'])
-    # header_err = required_header[~required_header.isin(pl_df.columns)]
     pl_df['Customer'] = pl_df['Customer'].apply(lambda x: x.strip().upper())
     pl_df['SO'] = pl_df['SO'].apply(lambda x: str(x).strip().upper())
     pl_df['PL Date'] = pl_df['PL Date'].apply(parsing_date)
