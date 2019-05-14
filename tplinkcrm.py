@@ -2168,7 +2168,7 @@ def accountUploadCheck():
     user = getUserById(login_session['id'])
     response = {}
     account_file = request.files.get('account-file')
-    account_df = pd.read_excel(account_file, converters={'Postcode': str})
+    account_df = pd.read_excel(account_file, dtype=str)
     # Check whether header in submission is ok
     required_header = pd.Series(['Tax', 'Name', 'Street', 'Postcode', 'City'])
     header_err = required_header[~required_header.isin(account_df.columns)]
@@ -2241,7 +2241,7 @@ def uploadCustomer():
             return "pass"
         # Request comes from file upload
         account_file = request.files.get('account-file')
-        account_df = pd.read_excel(account_file, converters={'Postcode': str})
+        account_df = pd.read_excel(account_file, dtype=str)
         raw_row_count = account_df.shape[0]
         account_df.rename(columns = {
                 'Tax': 'tax', 
