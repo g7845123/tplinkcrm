@@ -81,7 +81,7 @@ class Account(Base):
     street = Column(String(255))
     postcode = Column(String(255))
     city = Column(String(255))
-    ka = Column(Boolean)
+    partner = Column(Boolean)
     type = Column(String(255))
     manager = Column(String(255))
     url = Column(Text)
