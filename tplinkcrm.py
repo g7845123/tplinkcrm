@@ -2541,6 +2541,104 @@ def reportDashboardStart():
         types = types, 
     )
 
+@app.route('/customerfinder/start')
+@login_required(['DE'])
+def customerFinderStart():
+    user = getUserById(login_session['id'])
+    result = session.query(
+            Sellin
+        ).filter(
+            Sellin.country == user.country
+        ).order_by(
+            Sellin.date.desc()
+        ).first()
+    report_day_start = date(result.date.year, 1, 1)
+    last_day = monthrange(result.date.year, result.date.month)[1]
+    report_day_end = date(result.date.year, result.date.month, last_day)
+    report_range = (report_day_start, report_day_end)
+    result = session.query(
+            Account.type.distinct(), 
+        ).filter(
+            Account.country == user.country
+        ).all()
+    types = [e[0] for e in result]
+    types.remove('TP-LINK')
+    types.remove('DISTRIBUTOR')
+    return render_template(
+        'customer_finder_start.html', 
+        login = login_session, 
+        report_range = report_range, 
+        types = types, 
+    )
+
+@app.route('/customerfinder/result')
+@login_required(['DE'])
+def customerFinderResult():
+    user = getUserById(login_session['id'])
+    date_start = request.args.get('start')
+    date_start = parsing_date(date_start)
+    date_end = request.args.get('end')
+    date_end = parsing_date(date_end)
+    report_range = (date_start, date_end)
+    this_year = date_end.year
+    account_types = request.args.getlist('type')
+    postcode = request.args.get('postcode')
+    account_ids = session.query(
+            Account.id
+        ).filter(
+            Account.type.in_(account_types), 
+            Account.country == user.country, 
+            Account.postcode.ilike(postcode+'%'), 
+        )
+    result = session.query(
+            extract('year', Sellin.date).label('year'), 
+            Account.id.label('account_id'), 
+            Account.id.in_(account_ids), 
+            func.sum(Sellin.unit_price * Sellin.qty).label('revenue'), 
+            func.sum(Sellin.qty).label('qty'), 
+        ).filter(
+            Sellin.country == user.country,
+            Sellin.account_id == Account.id, 
+            extract('year', Sellin.date) >= this_year-1, 
+            extract('month', Sellin.date) >= date_start.month, 
+            extract('month', Sellin.date) <= date_end.month, 
+        )
+    result = result.group_by(
+            Account.id, 'year'
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    result_df['year'] = result_df['year'].astype(int)
+    sellin_df = pd.pivot_table(
+            result_df, 
+            values='revenue', 
+            columns=['year'], 
+            index=['account_id'], 
+            aggfunc=np.sum, 
+            fill_value=0
+        )
+    sellin_df['weight'] = sellin_df[this_year] + sellin_df[this_year-1]
+    sellin_df.sort_values(by=['weight'], ascending=False, inplace=True)
+    sellin_df.drop(columns=['weight'], inplace=True)
+    result = session.query(
+            Account.id.label('account_id'), 
+            Account.name.label('account_name'), 
+            Account.type.label('type'), 
+            Account.street.label('street'), 
+            Account.postcode.label('postcode'), 
+            Account.city.label('city'), 
+        ).filter(
+            Account.id.in_(account_ids), 
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    sellin_df = sellin_df.merge(result_df, on='account_id')
+    sellin_df = sellin_df.head(50)
+    return render_template(
+            'customer_finder_result.html', 
+            login = login_session, 
+            report_range = report_range, 
+            sellin_df = sellin_df, 
+        )
+
 @app.route('/report/product/start')
 @login_required(['ES', 'DE'])
 def reportByProductStart():

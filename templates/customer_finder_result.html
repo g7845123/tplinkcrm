@@ -1,0 +1,44 @@
+{% extends "template.html" %}
+
+{% block head %}
+{% endblock %}
+
+{% block content %}
+    <h1 class="page-header">
+        Search Result
+    </h1>
+
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Account</th>
+                <th>{{report_range[1].year-1}}</th>
+                <th>{{report_range[1].year}}</th>
+                <th>Type</th>
+                <th>Street</th>
+                <th>Postcode</th>
+                <th>City</th>
+                <th>Detail</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for idx, row in sellin_df.iterrows() %}
+            <tr>
+                <td>{{row.account_name}}</td>
+                <td>{{row[report_range[1].year-1]/100}}</td>
+                <td>{{row[report_range[1].year]/100}}</td>
+                <td>{{row.type}}</td>
+                <td>{{row.street}}</td>
+                <td>{{row.postcode}}</td>
+                <td>{{row.city}}</td>
+                <td><a href="/account/{{row.account_id}}?start={{report_range[0].strftime("%Y-%m-%d")}}&end={{report_range[1].strftime("%Y-%m-%d")}}" target="_blank">Detail</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+{% endblock %}
+
+{% block script %}
+
+{% endblock %}
