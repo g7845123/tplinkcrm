@@ -38,32 +38,34 @@
     <div>No data available</div>
     {% endif %}
 
-    <h2>View by Month</h2>
-    {% if not monthview_df.empty %}
-    <div id="sellin-by-month" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Month</th>
-                {% for column in monthview_df.columns %}
-                <th>{{column}}</th>
+    {% for account_type, monthview_df in monthview_dict.items() %}
+        <h2>{{account_type}} by Month</h2>
+        {% if not monthview_df.empty %}
+        <div id="{{account_type}}-by-month" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Month</th>
+                    {% for column in monthview_df.columns %}
+                    <th>{{column}}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for idx, row in monthview_df.iterrows() %}
+                <tr>
+                    <td>{{idx}}</td>
+                    {% for column in monthview_df.columns %}
+                    <td>{{row[column]/100}}</td>
+                    {% endfor %}
+                </tr>
                 {% endfor %}
-            </tr>
-        </thead>
-        <tbody>
-            {% for idx, row in monthview_df.iterrows() %}
-            <tr>
-                <td>{{idx}}</td>
-                {% for column in monthview_df.columns %}
-                <td>{{row[column]/100}}</td>
-                {% endfor %}
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <div>No data available</div>
-    {% endif %}
+            </tbody>
+        </table>
+        {% else %}
+        <div>No data available</div>
+        {% endif %}
+    {% endfor %}
 
 {% endblock %}
 
@@ -73,57 +75,57 @@
 
 <script>
 
-{% if not monthview_df.empty %}
-Highcharts.chart('sellin-by-month', {
-    chart: {
-        type: 'column'
-    },
-    title: {
-        text: 'Sellin by Month'
-    },
-    xAxis: {
-        categories: [
-            {% for idx, column in monthview_df.iteritems() %}
-            '{{idx}}', 
-            {% endfor %}
-        ],
-        crosshair: true
-    },
-    yAxis: {
-        min: 0,
+{% for account_type, monthview_df in monthview_dict.items() %}
+    {% if not monthview_df.empty %}
+    Highcharts.chart('{{account_type}}-by-month', {
+        chart: {
+            type: 'column'
+        },
         title: {
-            text: 'Sellin (EUR)'
-        }
-    },
-    tooltip: {
-        headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
-        pointFormat: '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' +
-            '<td style="padding:0"><b>{point.y:.1f} EUR</b></td></tr>',
-        footerFormat: '</table>',
-        shared: true,
-        useHTML: true
-    },
-    plotOptions: {
-        column: {
-            pointPadding: 0.2,
-            borderWidth: 0
-        }
-    },
-    series: [
-        {% for idx, column in monthview_df.drop(columns=['Total']).iterrows() %}
-        {
-            name: "{{idx}}", 
-            data: [
-                {% for e in column %}
-                {{e/100}},
+            text: 'Sellin by Month'
+        },
+        xAxis: {
+            categories: [
+                {% for idx, column in monthview_df.iteritems() %}
+                '{{idx}}', 
                 {% endfor %}
-            ]
-        }, 
-        {% endfor %}
-    ]
-});
-{% endif %}
-
-
+            ],
+            crosshair: true
+        },
+        yAxis: {
+            min: 0,
+            title: {
+                text: 'Sellin (EUR)'
+            }
+        },
+        tooltip: {
+            headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
+            pointFormat: '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' +
+                '<td style="padding:0"><b>{point.y:.1f} EUR</b></td></tr>',
+            footerFormat: '</table>',
+            shared: true,
+            useHTML: true
+        },
+        plotOptions: {
+            column: {
+                pointPadding: 0.2,
+                borderWidth: 0
+            }
+        },
+        series: [
+            {% for idx, column in monthview_df.drop(columns=['Total']).iterrows() %}
+            {
+                name: "{{idx}}", 
+                data: [
+                    {% for e in column %}
+                    {{e/100}},
+                    {% endfor %}
+                ]
+            }, 
+            {% endfor %}
+        ]
+    });
+    {% endif %}
+{% endfor %}
 </script>
 {% endblock %}

@@ -3287,26 +3287,42 @@ def sellinDashboard():
     progress_benchmark = (recent_date - report_day_start) / (report_day_end - report_day_start) - 1
     progress_benchmark = "{0:.0%}".format(progress_benchmark)
     result = session.query(
+            Account.type.distinct(), 
+        ).filter(
+            Account.country == user.country
+        ).all()
+    account_types = [e[0] for e in result]
+    account_types.remove('TP-LINK')
+    account_types.remove('DISTRIBUTOR')
+    account_types.append('ALL')
+    result = session.query(
             extract('year', Sellin.date).label('year'), 
             extract('month', Sellin.date).label('month'), 
+            Account.type.label('account_type'), 
             func.sum(Sellin.unit_price * Sellin.qty).label('revenue'), 
         ).filter(
             Sellin.country == user.country,
+            Sellin.account_id == Account.id, 
         ).group_by(
-            'year', 'month'
+            'year', 'month', 'account_type', 
         )
-    result_df = pd.read_sql(result.statement, result.session.bind)
-    result_df['month'] = result_df['month'].astype(int)
-    result_df['year'] = result_df['year'].astype(int)
-    monthview_df = pd.pivot_table(
-            result_df, 
-            values='revenue', 
-            index=['year'], 
-            columns=['month'], 
-            aggfunc=np.sum, 
-            fill_value=0
-        )
-    monthview_df['Total'] = monthview_df.sum(axis=1)
+    monthview_dict = {}
+    for account_type in account_types:
+        result_df = pd.read_sql(result.statement, result.session.bind)
+        result_df['month'] = result_df['month'].astype(int)
+        result_df['year'] = result_df['year'].astype(int)
+        if account_type != 'ALL':
+            result_df = result_df[result_df['account_type'] == account_type]
+        monthview_df = pd.pivot_table(
+                result_df, 
+                values='revenue', 
+                index=['year'], 
+                columns=['month'], 
+                aggfunc=np.sum, 
+                fill_value=0
+            )
+        monthview_df['Total'] = monthview_df.sum(axis=1)
+        monthview_dict[account_type] = monthview_df
     result = session.query(
             extract('year', Sellin.date).label('year'), 
             Account.type.label('account_type'), 
@@ -3344,7 +3360,7 @@ def sellinDashboard():
     return render_template(
             'sellin_dashboard.html', 
             login = login_session, 
-            monthview_df = monthview_df, 
+            monthview_dict = monthview_dict, 
             progress_df = progress_df, 
             progress_benchmark = progress_benchmark, 
             this_year = this_year, 
