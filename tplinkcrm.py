@@ -1003,7 +1003,7 @@ def distriStockDashboard():
     # last_day = monthrange(result.date.year, result.date.month)[1]
     # report_day_end = date(result.date.year, result.date.month, last_day)
     report_day_end = result.date
-    report_day_start = report_day_end - timedelta(days=60)
+    report_day_start = report_day_end - timedelta(days=90)
     # report_day_start = date(report_day_start.year, report_day_start.month, 1)
     result = session.query(
             Account.id.label('id'), 
@@ -1050,8 +1050,8 @@ def distriStockDashboard():
         )
     stock_df = stock_df[~stock_df.index.duplicated(keep='first')]
     result_df = result_df.join(stock_df)
-    result_df['woc'] = result_df['stock']*8/result_df['sellin']
-    result_df['woc_with_bo'] = (result_df['stock'] + result_df['bo'])*8/result_df['sellin']
+    result_df['woc'] = result_df['stock']*12/result_df['sellin']
+    result_df['woc_with_bo'] = (result_df['stock'] + result_df['bo'])*12/result_df['sellin']
     result_df = result_df.fillna(0)
     result_df = result_df.sort_values(by=['stock'], ascending=False)
     return render_template(
