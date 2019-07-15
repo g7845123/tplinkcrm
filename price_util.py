@@ -92,7 +92,8 @@ def query_online_price(country, account, link):
                 ele = parsed_html.find('span', {"id": "priceblock_ourprice"})
             if ele:
                 text = ele.get_text()
-                price = text[4:].replace('.', '').replace(',', '.')
+                text = text.replace('.', '').replace(',', '.')
+                price = re.findall("\d+\.\d+", text)[0]
                 price = round(float(price)*100)
         # MM
         if account == 'MM': 
@@ -105,4 +106,4 @@ def query_online_price(country, account, link):
     return price
 
 if __name__ == "__main__":
-    print(query_online_price('ES', 'AMZ', 'https://www.amazon.es/dp/B010RXXY48'))
+    print(query_online_price('DE', 'AMZ', 'https://www.amazon.de/dp/B071DP327B/'))
