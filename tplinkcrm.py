@@ -3366,6 +3366,51 @@ def sellinDashboard():
             this_year = this_year, 
         )
 
+@app.route('/sellin/detail', methods=['GET', 'POST'])
+@login_required(['ES', 'DE'])
+def sellinDetail():
+    user = getUserById(login_session['id'])
+    account_id = request.args.get('account')
+    result = session.query(
+            Sellin.date.label('date'), 
+            Sellin.product_id.label('product_id'), 
+            Sellin.distri_id.label('distri_id'), 
+            Sellin.account_id.label('account_id'), 
+            Sellin.qty.label('qty'), 
+            Sellin.unit_price.label('unit_price'), 
+        ).filter(
+            Sellin.account_id == account_id, 
+            Sellin.country == user.country, 
+        )
+    sellin_df = pd.read_sql(result.statement, result.session.bind)
+    result = session.query(
+            Account.id.label('account_id'), 
+            Account.name.label('account_name'), 
+        ).filter(
+            Account.country == user.country, 
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    sellin_df = sellin_df.merge(result_df, on='account_id', how='left')
+    result = session.query(
+            Account.id.label('distri_id'), 
+            Account.name.label('distri_name'), 
+        ).filter(
+            Account.country == user.country, 
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    sellin_df = sellin_df.merge(result_df, on='distri_id', how='left')
+    result = session.query(
+            Product.id.label('product_id'), 
+            Product.sku.label('sku'), 
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    sellin_df = sellin_df.merge(result_df, on='product_id', how='left')
+    return render_template(
+            'sellin_detail.html', 
+            login = login_session, 
+            sellin_df = sellin_df, 
+        )
+
 @app.route('/account/<int:account_id>', methods=['GET', 'POST'])
 @login_required(['ES', 'DE'])
 def viewAccount(account_id):
