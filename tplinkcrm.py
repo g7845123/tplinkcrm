@@ -3381,6 +3381,8 @@ def sellinDetail():
         ).filter(
             Sellin.account_id == account_id, 
             Sellin.country == user.country, 
+        ).order_by(
+            Sellin.date.desc()
         )
     sellin_df = pd.read_sql(result.statement, result.session.bind)
     result = session.query(
