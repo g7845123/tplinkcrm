@@ -3510,6 +3510,15 @@ def viewAccount(account_id):
             session.add(accountContact)
             session.commit()
             flash('Changes saved')
+        elif submission_type == "delete-contact":
+            contact_id = request.form.get('contact-id')
+            accountContact = session.query(
+                AccountContact
+            ).filter(
+                AccountContact.id == contact_id
+            ).delete()
+            session.commit()
+            flash('Changes saved')
     result = session.query(
             AccountNote.id, 
             AccountNote.created, 
