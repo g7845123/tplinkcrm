@@ -29,7 +29,29 @@
         </tbody>
     </table>
 
+    <button class="btn btn-link" onclick="newAccount()" type="button">Add new account in case no result is found</button>
+    <form id="new-account" class="form-group"  method="POST" style="display:none" >
+        <label for="account-name">Name</label>
+        <input class="form-control" name="account-name">
+        <label for="account-tax">Tax</label>
+        <input class="form-control" name="account-tax">
+        <label for="account-street">Street</label>
+        <input class="form-control" name="account-street">
+        <label for="account-postcode">Postcode</label>
+        <input class="form-control" name="account-postcode">
+        <label for="account-city">City</label>
+        <input class="form-control" name="account-city">
+        <label for="account-url">Website</label>
+        <input class="form-control" name="account-url">
+        <button class="btn btn-primary" type="submit" name="submit" value="new-account">Submit</button>
+    </form>
+
 {% endblock %}
 
 {% block script %}
+<script>
+var newAccount = function() {
+    $('#new-account').show();
+};
+</script>
 {% endblock %}
