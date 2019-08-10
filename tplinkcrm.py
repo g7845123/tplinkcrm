@@ -3141,6 +3141,47 @@ def editPricelink():
 @login_required(['ES', 'DE'])
 def searchAccount():
     user = getUserById(login_session['id'])
+    if request.method == 'POST':
+        account_name = request.form.get('account-name')
+        account_tax = request.form.get('account-tax')
+        account_street = request.form.get('account-street')
+        account_postcode = request.form.get('account-postcode')
+        account_city = request.form.get('account-city')
+        account_url = request.form.get('account-url')
+        if not account_name:
+            flash('Account name must not be empty')
+            return render_template(
+                'account_search.html', 
+                login = login_session, 
+                account_name = account_name, 
+                account_df = account_df, 
+                report_range = report_range, 
+            )
+        newAccount = Account(
+                name = account_name.upper(), 
+                country = user.country, 
+                type = 'UNCATEGORIZED', 
+            )
+        if account_tax:
+            newAccount.tax = account_tax.upper(), 
+        if account_street:
+            newAccount.street = account_street.upper(), 
+        if account_postcode:
+            newAccount.postcode = account_postcode.upper(), 
+        if account_city:
+            newAccount.city = account_city.upper(), 
+        if account_url:
+            newAccount.url = account_url, 
+        session.add(newAccount)
+        session.commit()
+        newNameToAccount = NameToAccount(
+                name = account_name.upper(), 
+                country = user.country, 
+                account_id = newAccount.id, 
+            )
+        session.add(newNameToAccount)
+        session.commit()
+        flash('Changes saved')
     account_name = request.args.get('account-name')
     result = session.query(
             Sellin
