@@ -3646,6 +3646,28 @@ def viewAccount(account_id):
     # Not distributor
     else:
         result = session.query(
+                func.sum(Sellin.unit_price * Sellin.qty).label('revenue'), 
+            ).filter(
+                Sellin.account_id == account_id,
+                Sellin.country == user.country,
+                Sellin.date >= date_start, 
+                Sellin.date <= date_end, 
+            ).first()
+        ytd_revenue = 0
+        if result.revenue:
+            ytd_revenue = result.revenue
+        result = session.query(
+                func.sum(Sellin.unit_price * Sellin.qty).label('revenue'), 
+            ).filter(
+                Sellin.account_id == account_id,
+                Sellin.country == user.country,
+                Sellin.date >= date_end-timedelta(days=365), 
+                Sellin.date <= date_end, 
+            ).first()
+        past_365_days_revenue = 0
+        if result.revenue:
+            past_365_days_revenue = result.revenue
+        result = session.query(
                 extract('year', Sellin.date).label('year'), 
                 extract('month', Sellin.date).label('month'), 
                 func.sum(Sellin.unit_price * Sellin.qty).label('revenue'), 
@@ -3768,6 +3790,8 @@ def viewAccount(account_id):
                 account_contact_df = account_contact_df, 
                 managers = managers, 
                 user = user, 
+                ytd_revenue = ytd_revenue, 
+                past_365_days_revenue = past_365_days_revenue, 
             )
 
 @app.route('/manager/<int:manager_id>')

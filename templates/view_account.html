@@ -38,6 +38,36 @@
         <label for="account-url">Website</label>
         <span id="account-url"><a href="{{account.url}}" target="_blank">{{account.url}}</a></span>
     </div>
+    <div>
+        <label for="account-location">Location</label>
+        <span id="account-location">{{"{}, {} {}".format(account.street, account.postcode, account.city)}}</span>
+    </div>
+    {% if account.pam %}
+    <div>
+        <label for="account-pam">PAM</label>
+        <span id="account-pam">{{account.pam/100}}</span>
+    </div>
+    <div>
+        <label for="account-share">Share</label>
+        <span id="account-share">{{"{0:.0%}".format(past_365_days_revenue/account.pam)}}({{past_365_days_revenue/100}} in past 365 days)</span>
+    </div>
+    {% endif %}
+    {% if account.target %}
+    <div>
+        <label for="account-target">Target</label>
+        <span id="account-target"> {{account.target/100}}</span>
+    </div>
+    <div>
+        <label for="account-progress">Progress</label>
+        <span id="account-progress">{{"{0:.0%}".format(ytd_revenue/account.target)}} (YTD {{ytd_revenue/100}})</span>
+    </div>
+    {% endif %}
+    {% if account.stage %}
+    <div>
+        <label for="account-stage">Stage</label>
+        <span id="account-stage">{{account.stage}}</span>
+    </div>
+    {% endif %}
 
     <h2>Contacts <button class="btn btn-primary" onclick="newContact()" type="button">Add</button></h2>
     
