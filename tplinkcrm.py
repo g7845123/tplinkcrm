@@ -4308,7 +4308,7 @@ class NameToAccountView(ModelView):
     }
 
 class AccountView(ModelView):
-    column_filters = ['name', 'tax', 'partner', 'type']
+    column_filters = ['name', 'tax', 'type']
 
 class StockView(ModelView):
     column_filters = ['date', 'product', 'account']
