@@ -45,17 +45,17 @@
     {% if account.pam %}
     <div>
         <label for="account-pam">PAM</label>
-        <span id="account-pam">{{account.pam/100}}</span>
+        <span id="account-pam">{{'{:0.0f}'.format(account.pam/100)}}</span>
     </div>
     <div>
         <label for="account-share">Share</label>
-        <span id="account-share">{{"{0:.0%}".format(past_365_days_revenue/account.pam)}}({{past_365_days_revenue/100}} in past 365 days)</span>
+        <span id="account-share">{{"{0:.0%}".format(past_365_days_revenue/account.pam)}} ({{past_365_days_revenue/100}} in past 365 days)</span>
     </div>
     {% endif %}
     {% if account.target %}
     <div>
         <label for="account-target">Target</label>
-        <span id="account-target"> {{account.target/100}}</span>
+        <span id="account-target"> {{'{:0.0f}'.format(account.target/100)}}</span>
     </div>
     <div>
         <label for="account-progress">Progress</label>
@@ -378,6 +378,43 @@ var note{{row.id}}Edit = function() {
     $('#form-modal').modal('show');
 };
 {% endfor %}
+
+var basicInfoEdit = function() {
+    var modalBody = $('#modal-body');
+    var basicInfoForm = `
+        <form class="form-group"  method="POST" action="?start={{date_start.strftime('%Y-%m-%d')}}&end={{date_end.strftime('%Y-%m-%d')}}">
+            <label for="account-tax">Tax Number</label>
+            <input class="form-control" name="account-tax" value="{{account.tax or ''}}">
+            <label for="account-type">Type</label>
+            <select class="form-control" name="account-type">
+                <option id='account-type-default' selected>{{account.type}}</option>
+                <option value="UNCATEGORIZED">UNCATEGORIZED</option>
+                <option value="ONLINE">ONLINE</option>
+                <option value="SUB-DISTY">SUB-DISTY</option>
+                <option value="ABROAD">ABROAD</option>
+                <option value="ISP">ISP</option>
+                <option value="RESELLER">RESELLER</option>
+                <option value="RETAIL">RETAIL</option>
+                <option value="B2B">B2B</option>
+                <option value="ENDUSER">ENDUSER</option>
+            </select>
+            <label for="account-url">Website</label>
+            <input class="form-control" name="account-url" value="{{account.url or ''}}">
+            <label for="account-street">Street</label>
+            <input class="form-control" name="account-street" value="{{account.street or ''}}">
+            <label for="account-postcode">Postcode</label>
+            <input class="form-control" name="account-postcode" value="{{account.postcode or ''}}">
+            <label for="account-city">City</label>
+            <input class="form-control" name="account-postcode" value="{{account.city or ''}}">
+            <label for="account-pam">PAM</label>
+            <input class="form-control" name="account-pam" value="{% if account.pam %}{{'{:0.0f}'.format(account.pam/100)}}{% else %}{% endif %}">
+            <button class="btn btn-primary" type="submit" name="submit" value="basic-info-edit">Submit</button>
+        </form>
+    `;
+    modalBody.html(basicInfoForm);
+    $('#form-modal').modal('show');
+    adaptiveTextarea();
+};
 
 {% if not monthview_df.empty %}
 Highcharts.chart('sellin-by-month', {

@@ -3560,6 +3560,34 @@ def viewAccount(account_id):
             ).delete()
             session.commit()
             flash('Changes saved')
+        elif submission_type == "basic-info-edit":
+            account_tax = request.form.get('account-tax')
+            account_type = request.form.get('account-type')
+            account_url = request.form.get('account-url')
+            account_street = request.form.get('account-street')
+            account_postcode = request.form.get('account-postcode')
+            account_city = request.form.get('account-city')
+            account_pam = request.form.get('account-pam')
+            if account_tax:
+                account.tax = account_tax.upper()
+            if account_type:
+                account.type = account_type.upper()
+            if account_url:
+                account.url = account_url
+            if account_street:
+                account.street = account_street.upper()
+            if account_postcode:
+                account.postcode = account_postcode.upper()
+            if account_city:
+                account.city = account_city.upper()
+            if account_pam:
+                if account_pam.isdigit():
+                    account.pam = int(account_pam) * 100
+                else:
+                    flash('PAM must be integer without . or ,')
+            session.add(account)
+            session.commit()
+            flash('Changes saved')
     result = session.query(
             AccountNote.id, 
             AccountNote.created, 
