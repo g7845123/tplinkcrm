@@ -405,7 +405,7 @@ var basicInfoEdit = function() {
             <label for="account-postcode">Postcode</label>
             <input class="form-control" name="account-postcode" value="{{account.postcode or ''}}">
             <label for="account-city">City</label>
-            <input class="form-control" name="account-postcode" value="{{account.city or ''}}">
+            <input class="form-control" name="account-city" value="{{account.city or ''}}">
             <label for="account-pam">PAM</label>
             <input class="form-control" name="account-pam" value="{% if account.pam %}{{'{:0.0f}'.format(account.pam/100)}}{% else %}{% endif %}">
             <button class="btn btn-primary" type="submit" name="submit" value="basic-info-edit">Submit</button>
