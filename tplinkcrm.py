@@ -3568,6 +3568,7 @@ def viewAccount(account_id):
             account_postcode = request.form.get('account-postcode')
             account_city = request.form.get('account-city')
             account_pam = request.form.get('account-pam')
+            account_stage = request.form.get('account-stage')
             if account_tax:
                 account.tax = account_tax.upper()
             if account_type:
@@ -3585,6 +3586,8 @@ def viewAccount(account_id):
                     account.pam = int(account_pam) * 100
                 else:
                     flash('PAM must be integer without . or ,')
+            if account_stage:
+                account.stage = account_stage.upper()
             session.add(account)
             session.commit()
             flash('Changes saved')
