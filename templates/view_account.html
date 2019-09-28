@@ -420,7 +420,7 @@ var basicInfoEdit = function() {
             <input class="form-control" name="account-pam" value="{% if account.pam %}{{'{:0.0f}'.format(account.pam/100)}}{% else %}{% endif %}">
             <label for="account-stage">Stage</label>
             <select class="form-control" name="account-stage">
-                <option id='account-stage-default' selected>{{account.stage}}</option>
+                <option id='account-stage-default' value='' selected>{{account.stage or ''}}</option>
                 <option value="ACQUISITION">ACQUISITION</option>
                 <option value="DEVELOPMENT">DEVELOPMENT</option>
                 <option value="RETENTION">RETENTION</option>
