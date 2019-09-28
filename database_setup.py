@@ -69,6 +69,15 @@ class AccountContact(Base):
     
     user_id = Column(Integer, ForeignKey('user.id'))
     user = relationship('User')
+    
+class AccountPartner(Base):
+    __tablename__ = 'account_partner'
+
+    id = Column(Integer, primary_key=True)
+    partner = Column(String(255), nullable=False)
+
+    account_id = Column(Integer, ForeignKey('account.id'))
+    account = relationship('Account')
 
 class Account(Base):
     __tablename__ = 'account'

@@ -12,7 +12,7 @@ from sqlalchemy.sql import label
 from sqlalchemy import extract
 from sqlalchemy.orm import aliased
 from sqlalchemy import and_, or_
-from database_setup import Base, User, Product, SkuToProduct, Stock, Sellout, Productline, PriceLink, PriceHistory, Task, ResetPwdToken, Account, NameToAccount, Sellin, Role, EmailSubscription, PackingListDetail, AccountNote, AccountContact
+from database_setup import Base, User, Product, SkuToProduct, Stock, Sellout, Productline, PriceLink, PriceHistory, Task, ResetPwdToken, Account, NameToAccount, Sellin, Role, EmailSubscription, PackingListDetail, AccountNote, AccountContact, AccountPartner
 
 import requests
 from bs4 import BeautifulSoup
@@ -3467,6 +3467,12 @@ def viewAccount(account_id):
         ).filter(
             Account.id == account_id, 
         ).first()
+    account_partner_query = session.query(
+            AccountPartner
+        ).filter(
+            AccountPartner.account_id == account_id
+        )
+    account_partner_db = [e.partner for e in account_partner_query]
     if request.method == 'POST':
         submission_type = request.form.get('submit')
         if submission_type == "new-note":
@@ -3569,6 +3575,7 @@ def viewAccount(account_id):
             account_city = request.form.get('account-city')
             account_pam = request.form.get('account-pam')
             account_stage = request.form.get('account-stage')
+            account_partners = request.form.getlist('account-partners')
             if account_tax:
                 account.tax = account_tax.upper()
             if account_type:
@@ -3588,6 +3595,25 @@ def viewAccount(account_id):
                     flash('PAM must be integer without . or ,')
             if account_stage:
                 account.stage = account_stage.upper()
+            if account_partners:
+                if set(account_partner_db) != set(account_partners):
+                    account_partner_query.delete()
+                    for account_partner in account_partners:
+                        newAccountPartner = AccountPartner(
+                                partner = account_partner, 
+                                account_id = account_id
+                            )
+                        session.add(newAccountPartner)
+                    session.commit()
+                    account_partner_query = session.query(
+                            AccountPartner
+                        ).filter(
+                            AccountPartner.account_id == account_id
+                        )
+                    account_partner_db = [e.partner for e in account_partner_query]
+                    flash('Partner status updated')
+                else: 
+                    flash('Partner status unchanged')
             session.add(account)
             session.commit()
             flash('Changes saved')
@@ -3823,6 +3849,8 @@ def viewAccount(account_id):
                 user = user, 
                 ytd_revenue = ytd_revenue, 
                 past_365_days_revenue = past_365_days_revenue, 
+                account_partner_all = ACCOUNT_PARTNER_ALL, 
+                account_partner_db = account_partner_db, 
             )
 
 @app.route('/manager/<int:manager_id>')
@@ -4426,6 +4454,7 @@ admin.add_view(ModelView(EmailSubscription, session))
 admin.add_view(PackingListView(PackingListDetail, session))
 admin.add_view(AccountNoteView(AccountNote, session))
 admin.add_view(ModelView(AccountContact, session))
+admin.add_view(ModelView(AccountPartner, session))
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=80)
