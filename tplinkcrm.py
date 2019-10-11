@@ -930,6 +930,25 @@ def accountDownload():
     writer.save()
     return send_file('/var/www/tplinkcrm/report/accounts.xlsx')
 
+@app.route('/account-contact/download')
+@login_required(['ES', 'DE'])
+def accountContactDownload():
+    user = getUserById(login_session['id'])
+    result = session.query(
+            Account.name, 
+            AccountContact.name, 
+            AccountContact.title, 
+            AccountContact.email, 
+            AccountContact.phone, 
+        ).filter(
+            Account.id == AccountContact.account_id, 
+        )
+    account_contact_df = pd.read_sql(result.statement, result.session.bind)
+    writer = pd.ExcelWriter('/var/www/tplinkcrm/report/account_contacts.xlsx', engine='xlsxwriter')
+    account_contact_df.to_excel(writer, index=False)
+    writer.save()
+    return send_file('/var/www/tplinkcrm/report/account_contacts.xlsx')
+
 # @app.route('/woc/ka/download')
 # @login_required(['ES'])
 # def wocDownload():
