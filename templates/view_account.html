@@ -43,6 +43,10 @@
         <label for="account-location">Location</label>
         <span id="account-location">{{"{}, {} {}".format(account.street, account.postcode, account.city)}}</span>
     </div>
+    <div>
+        <label for="account-store">Offline store</label>
+        <span id="account-store">{{account.store}}</span>
+    </div>
     {% if account.pam %}
     <div>
         <label for="account-pam">PAM</label>
@@ -418,6 +422,10 @@ var basicInfoEdit = function() {
             <input class="form-control" name="account-city" value="{{account.city or ''}}">
             <label for="account-pam">PAM</label>
             <input class="form-control" name="account-pam" value="{% if account.pam %}{{'{:0.0f}'.format(account.pam/100)}}{% else %}{% endif %}">
+            <div class="form-check">
+                <label class="form-check-label" for="account-store">Offline store</label>
+                <input class="form-check-input" type="checkbox" value="account-store" name="account-store" {% if account.store %}checked {% endif %}>
+            </div>
             <label for="account-stage">Stage</label>
             <select class="form-control" name="account-stage">
                 <option id='account-stage-default' value='' selected>{{account.stage or ''}}</option>

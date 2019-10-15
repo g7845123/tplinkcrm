@@ -94,6 +94,7 @@ class Account(Base):
     url = Column(Text)
     pam = Column(Integer)
     target = Column(Integer)
+    store = Column(Boolean)
     stage = Column(String(255))
 
     user_id = Column(Integer, ForeignKey('user.id'))

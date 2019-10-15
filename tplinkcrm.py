@@ -3595,6 +3595,8 @@ def viewAccount(account_id):
             account_pam = request.form.get('account-pam')
             account_stage = request.form.get('account-stage')
             account_partners = request.form.getlist('account-partners')
+            account_store = request.form.get('account-store')
+            account_store = bool(account_store)
             if account_tax:
                 account.tax = account_tax.upper()
             if account_type:
@@ -3614,6 +3616,7 @@ def viewAccount(account_id):
                     flash('PAM must be integer without . or ,')
             if account_stage:
                 account.stage = account_stage.upper()
+            account.store = account_store
             if account_partners:
                 if set(account_partner_db) != set(account_partners):
                     account_partner_query.delete()
