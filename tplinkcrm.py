@@ -369,7 +369,7 @@ def invoiceUpload():
     return redirect('/operational/dashboard')
 
 @app.route('/interaction/dashboard')
-@login_required(['ES', 'DE'])
+@login_required(['admin', 'manager'])
 def interactionDashboard():
     user = getUserById(login_session['id'])
     date_start = request.args.get('start')
@@ -1925,7 +1925,7 @@ def skuQuery():
 #     )
 
 @app.route('/stock/upload-check', methods=['POST'])
-@login_required(['admin'])
+@login_required(['admin', 'uploader'])
 def stockUploadCheck():
     user = getUserById(login_session['id'])
     response = {}
@@ -2029,7 +2029,7 @@ def stockUploadCheck():
     return simplejson.dumps(response)
 
 @app.route('/stock/upload', methods=['GET', 'POST'])
-@login_required(['admin'])
+@login_required(['admin', 'uploader'])
 def uploadStock():
     user = getUserById(login_session['id'])
     if request.method == 'POST':
@@ -2221,7 +2221,7 @@ def accountUploadCheck():
     return simplejson.dumps(response)
 
 @app.route('/account/upload', methods=['GET', 'POST'])
-@login_required(['admin'])
+@login_required(['admin', 'uploader'])
 def uploadCustomer():
     user = getUserById(login_session['id'])
     if request.method == 'POST':
@@ -2310,7 +2310,7 @@ def uploadCustomer():
         )
 
 @app.route('/sellin/upload-check', methods=['POST'])
-@login_required(['admin'])
+@login_required(['admin', 'uploader'])
 def sellinUploadCheck():
     user = getUserById(login_session['id'])
     response = {}
@@ -2424,7 +2424,7 @@ def sellinUploadCheck():
     return simplejson.dumps(response)
 
 @app.route('/sellin/upload', methods=['GET', 'POST'])
-@login_required(['admin'])
+@login_required(['admin', 'uploader'])
 def uploadSellin():
     user = getUserById(login_session['id'])
     if request.method == 'POST':
@@ -4445,7 +4445,7 @@ class PriceHistoryView(ModelView):
     column_filters = ['price_link', 'price']
 
 class AccountNoteView(ModelView):
-    column_filters = ['type', 'note']
+    column_filters = ['type', 'note', 'account']
     form_ajax_refs = {
         'account': {
             'fields': ('name', ),
