@@ -2423,6 +2423,101 @@ def sellinUploadCheck():
         response['duplication'] = 'pass'
     return simplejson.dumps(response)
 
+@app.route('/account-detail/upload-check', methods=['POST'])
+@login_required(['admin', 'uploader'])
+def accountDetailUploadCheck():
+    user = getUserById(login_session['id'])
+    response = {}
+    account_detail_file = request.files.get('account-detail-file')
+    account_detail_df = pd.read_excel(account_detail_file)
+    # Check whether header in submission is ok
+    required_header = pd.Series(['Customer', 'Tax', 'Street', 'Postcode', 'City'])
+    header_err = required_header[~required_header.isin(account_detail_df.columns)]
+    if not header_err.empty:
+        response['header'] = header_err.to_dict()
+        return simplejson.dumps(response)
+    else:
+        response['header'] = 'pass'
+    account_detail_df.rename(columns = {
+            'Customer': 'customer', 
+            'Tax': 'tax', 
+            'Street': 'street', 
+            'Postcode': 'postcode', 
+            'City': 'city', 
+        }, inplace = True)
+    account_detail_df['customer'] = account_detail_df['customer'].apply(lambda x: x.strip().upper())
+    account_detail_df['customer'] = account_detail_df['customer'].apply(lambda x: re.sub('\s+', ' ', x))
+    # Check whether all customers are mapped
+    account_names = pd.unique(account_detail_df['customer'])
+    account_names = pd.Series(account_names)
+    unmapped_accounts = get_unmapped_account(account_names, user.country)
+    if not unmapped_accounts.empty:
+        response['customer'] = unmapped_accounts.to_dict()
+        return simplejson.dumps(response)
+    else: 
+        response['customer'] = 'pass'
+    return simplejson.dumps(response)
+
+@app.route('/account-detail/upload', methods=['GET', 'POST'])
+@login_required(['admin', 'uploader'])
+def uploadAccountDetail():
+    user = getUserById(login_session['id'])
+    if request.method == 'POST':
+        account_detail_file = request.files.get('account-detail-file')
+        account_detail_df = pd.read_excel(account_detail_file)
+        account_detail_df = account_detail_df.fillna('')
+        raw_row_count = account_detail_df.shape[0]
+        account_detail_df.rename(columns = {
+                'Customer': 'customer', 
+                'Tax': 'tax', 
+                'Street': 'street', 
+                'Postcode': 'postcode', 
+                'City': 'city', 
+            }, inplace = True)
+        account_detail_df['customer'] = account_detail_df['customer'].apply(lambda x: x.strip().upper())
+        account_detail_df['customer'] = account_detail_df['customer'].apply(lambda x: re.sub('\s+', ' ', x))
+        account_detail_df['tax'] = account_detail_df['tax'].apply(lambda x: str(x).strip().upper())
+        account_detail_df['street'] = account_detail_df['street'].apply(lambda x: str(x).strip().upper())
+        account_detail_df['postcode'] = account_detail_df['postcode'].apply(lambda x: str(x).strip().upper())
+        account_detail_df['city'] = account_detail_df['city'].apply(lambda x: str(x).strip().upper())
+        result = session.query(
+                NameToAccount.name.label('name'), 
+                NameToAccount.account_id.label('account_id')
+            ).filter(
+                NameToAccount.country == user.country
+            )
+        result_df = pd.read_sql(result.statement, result.session.bind)
+        customer_map_df = result_df.rename(columns = {
+                'name': 'customer', 
+                'account_id': 'customer_id', 
+            })
+        account_detail_df = account_detail_df.merge(customer_map_df, on='customer', how='left')
+        assert account_detail_df.shape[0] == raw_row_count
+        for index, row in account_detail_df.iterrows():
+            account = session.query(
+                    Account
+                ).filter(
+                    Account.id == row.customer_id, 
+                ).first()
+            if row.tax:
+                account.tax = row.tax
+            if row.street:
+                account.street = row.street
+            if row.postcode:
+                account.postcode = row.postcode
+            if row.city:
+                account.city = row.city
+            session.add(account)
+        session.commit()
+        flash('Successfully uploaded')
+        return redirect('/')
+    else:
+        return render_template(
+            'account_detail_upload.html', 
+            login = login_session, 
+            user = user, 
+        )
+
 @app.route('/sellin/upload', methods=['GET', 'POST'])
 @login_required(['admin', 'uploader'])
 def uploadSellin():

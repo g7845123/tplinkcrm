@@ -1,0 +1,90 @@
+{% extends 'template.html' %}
+{% block content %}
+
+<h1 class="page-header">
+    Upload Account Detail
+</h1>
+
+<form class="form-horizontal" action="#" method="POST" enctype="multipart/form-data">
+    <p>Please use the exact template to upload data. <a href="{{url_for('static', filename='download/account_detail_template.xlsx')}}">Download Template</a></p>
+    <div class="form-group row">
+        <label for="user-country" class="col-sm-2 col-form-label">Country: </label>
+        <div class="col-sm-10">
+            <input type="text" readonly class="form-control-plaintext" id="user-country" value="{{user.country}}">
+        </div>
+    </div>
+    <div class="form-group row">
+        <label for="account-detail-file" class="col-sm-2 col-form-label">File: </label>
+        <div class="col-sm-10">
+            <input type="file" class="form-control-file" name="account-detail-file" id="account-detail-file">
+        </div>
+    </div>
+    <div id="upload-status"></div>
+    <h2>Header Check</h2>
+    <div id="header-response"></div>
+    <h2>Customer Check</h2>
+    <div id="customer-response"></div>
+    <button type="submit" value="Upload" class="btn btn-primary" id="submit" style="display:none;" onclick="changeSubmissionState()">Submit</button>
+</form>
+
+{% endblock %}
+
+{% block script %}
+<script>
+$('form').submit(function() {
+    $(this).find("button[type='submit']").html('Uploading');
+    $(this).find("button[type='submit']").prop('disabled',true);
+});
+$(document).on('change','#account-detail-file' , function(){ 
+    $('#upload-status').html('<div class="alert alert-info">Checking uploaded file, please wait</div>');
+    var accountDetailForm = new FormData();
+    accountDetailForm.append('account-detail-file', $('#account-detail-file').prop('files')[0]);
+    var accountDetailRequest = new XMLHttpRequest();
+    accountDetailRequest.open("POST", "/account-detail/upload-check");
+    accountDetailRequest.send(accountDetailForm);
+    accountDetailRequest.onreadystatechange = function() {
+        if(this.readyState == 4 && this.status == 200) {
+            $('#upload-status').html('<div class="alert alert-success">Uploading completed</div>');
+            accountDetailResponse = JSON.parse(accountDetailRequest.response);
+            // Header check
+            if(accountDetailResponse.header == 'pass') {
+                $('#header-response').html('<div class="alert alert-success">Header check - ok</div>');
+                
+            }
+            else if(!accountDetailResponse.header){
+                $('#header-response').text('Please fix the error above to perform header check.');
+            }
+            else {
+                $('#header-response').html('<div class="alert alert-danger">Please include the following columns into submission (Header must be with the exact name)</div>');
+                for (var i in accountDetailResponse.header) {
+                    $('#header-response').append('<div>'+ accountDetailResponse.header[i] +'</div>');
+                }
+                $('#accountDetail-file').val('');
+            }
+            // Customer check
+            if(accountDetailResponse.customer == 'pass') {
+                $('#customer-response').html('<div class="alert alert-success">Customer name check - ok</div>');
+            }
+            else if(!accountDetailResponse.customer){
+                $('#customer-response').text('Please fix the error above to perform customer name check');
+            }
+            else {
+                $('#customer-response').html('<div class="alert alert-danger">The following customers are not found in the system</div>');
+                for (var i in accountDetailResponse.customer) {
+                    $('#customer-response').append('<div>'+ accountDetailResponse.customer[i] +'<div>');
+                }
+                $('#account-detail-file').val('');
+            }
+            if (
+                accountDetailResponse.header == 'pass' && 
+                accountDetailResponse.customer == 'pass' 
+            ) {
+                $('#submit').show();
+            }
+        } else {
+            $('#upload-status').html('Error in submitting, please retry. If the problem exists, please contact james.guo@tp-link.com');
+        }
+    } // accountDetailRequest.onreadystatechange
+}); // On change
+</script>
+{% endblock %}
