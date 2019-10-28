@@ -489,6 +489,24 @@ def mergeAccount():
         for row in rows:
             row.account_id = main_account_id
             session.add(row)
+        # Account note
+        rows = session.query(
+                AccountNote
+            ).filter(
+                AccountNote.account_id == account_to_merge_id
+            )
+        for row in rows:
+            row.account_id = main_account_id
+            session.add(row)
+        # Account contact
+        rows = session.query(
+                AccountContact
+            ).filter(
+                AccountContact.account_id == account_to_merge_id
+            )
+        for row in rows:
+            row.account_id = main_account_id
+            session.add(row)
         # Delete account
         session.query(
                 Account
