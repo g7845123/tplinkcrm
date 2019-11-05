@@ -3333,6 +3333,10 @@ def searchAccount():
     result = session.query(
             Account.id.label('account_id'), 
             Account.name.label('account_name'), 
+            Account.tax.label('account_tax'), 
+            Account.street.label('account_street'), 
+            Account.postcode.label('account_postcode'), 
+            Account.city.label('account_city'), 
             Account.type.label('account_type'), 
         ).filter(
             Account.id.in_(account_ids), 

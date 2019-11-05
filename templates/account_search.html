@@ -12,6 +12,10 @@
         <thead>
             <tr>
                 <th>Account</th>
+                <th>Tax</th>
+                <th>Street</th>
+                <th>Postcode</th>
+                <th>City</th>
                 <th>YTD Revenue</th>
                 <th>Type</th>
                 <th>Detail</th>
@@ -21,6 +25,10 @@
         {% for idx, account in account_df.iterrows() %}
             <tr>
                 <td>{{account.account_name}}</td>
+                <td>{{account.account_tax}}</td>
+                <td>{{account.account_street}}</td>
+                <td>{{account.account_postcode}}</td>
+                <td>{{account.account_city}}</td>
                 <td>{{account.revenue / 100}}</td>
                 <td>{{account.account_type}}</td>
                 <td><a href="/account/{{account.account_id}}?start={{report_range[0]}}&end={{report_range[1]}}">View</a></td>
