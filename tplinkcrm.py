@@ -2441,6 +2441,81 @@ def sellinUploadCheck():
         response['duplication'] = 'pass'
     return simplejson.dumps(response)
 
+@app.route('/asin/upload-check', methods=['POST'])
+@login_required(['admin', 'uploader'])
+def asinUploadCheck():
+    user = getUserById(login_session['id'])
+    response = {}
+    asin_file = request.files.get('asin-file')
+    asin_df = pd.read_excel(asin_file)
+    # Check whether header in submission is ok
+    required_header = pd.Series(['SKU', 'ASIN'])
+    header_err = required_header[~required_header.isin(asin_df.columns)]
+    if not header_err.empty:
+        response['header'] = header_err.to_dict()
+        return simplejson.dumps(response)
+    else:
+        response['header'] = 'pass'
+    asin_df.rename(columns = {
+            'SKU': 'sku', 
+            'ASIN': 'asin', 
+        }, inplace = True)
+    asin_df['sku'] = asin_df['sku'].apply(lambda x: x.strip().upper())
+    asin_df['sku'] = asin_df['sku'].apply(lambda x: re.sub('\s+', ' ', x))
+    asin_df['asin'] = asin_df['asin'].apply(lambda x: x.strip().upper())
+    # Check whether all SKU are mapped
+    skus = pd.unique(asin_df['sku'])
+    skus = pd.Series(skus)
+    unmapped_skus = get_unmapped_sku(skus)
+    if not unmapped_skus.empty:
+        response['sku'] = unmapped_skus.to_dict()
+        return simplejson.dumps(response)
+    else: 
+        response['sku'] = 'pass'
+    return simplejson.dumps(response)
+
+@app.route('/asin/upload', methods=['GET', 'POST'])
+@login_required(['admin', 'uploader'])
+def uploadAsin():
+    user = getUserById(login_session['id'])
+    if request.method == 'POST':
+        asin_file = request.files.get('asin-file')
+        asin_df = pd.read_excel(asin_file)
+        asin_df = asin_df.fillna('')
+        raw_row_count = asin_df.shape[0]
+        asin_df.rename(columns = {
+                'SKU': 'sku', 
+                'ASIN': 'asin', 
+            }, inplace = True)
+        asin_df['sku'] = asin_df['sku'].apply(lambda x: x.strip().upper())
+        asin_df['sku'] = asin_df['sku'].apply(lambda x: re.sub('\s+', ' ', x))
+        asin_df['asin'] = asin_df['asin'].apply(lambda x: str(x).strip().upper())
+        result = session.query(
+                SkuToProduct.sku.label('sku'), 
+                SkuToProduct.product_id.label('product_id')
+            )
+        sku_map_df = pd.read_sql(result.statement, result.session.bind)
+        asin_df = asin_df.merge(sku_map_df, on='sku', how='left')
+        assert asin_df.shape[0] == raw_row_count
+        for index, row in asin_df.iterrows():
+            product = session.query(
+                    Product
+                ).filter(
+                    Product.id == row.product_id, 
+                ).first()
+            if row.asin:
+                product.asin = row.asin
+            session.add(product)
+        session.commit()
+        flash('Successfully uploaded')
+        return redirect('/')
+    else:
+        return render_template(
+            'asin_upload.html', 
+            login = login_session, 
+            user = user, 
+        )
+
 @app.route('/account-detail/upload-check', methods=['POST'])
 @login_required(['admin', 'uploader'])
 def accountDetailUploadCheck():
