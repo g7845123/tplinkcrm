@@ -231,8 +231,7 @@ class Sellout(Base):
 
     id = Column(Integer, primary_key=True)
     date = Column(Date, nullable=False)
-    sellout = Column(Integer)
-    total = Column(Integer)
+    qty = Column(Integer)
 
     product_id = Column(Integer, ForeignKey('product.id'))
     product = relationship('Product')

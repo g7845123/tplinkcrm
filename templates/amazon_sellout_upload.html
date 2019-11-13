@@ -1,0 +1,90 @@
+{% extends 'template.html' %}
+{% block content %}
+
+<h1 class="page-header">
+    Upload Amazon Sellout
+</h1>
+
+<form class="form-horizontal" action="#" method="POST" enctype="multipart/form-data">
+    <p>Please use the exact template to upload data. <a href="{{url_for('static', filename='download/amazon_sellout_template.xlsx')}}">Download Template</a></p>
+    <div class="form-group row">
+        <label for="account-name" class="col-sm-2 col-form-label">Account: </label>
+        <div class="col-sm-10">
+            <input type="text" readonly class="form-control-plaintext" id="account-name" value="AMAZON {{user.country}}">
+        </div>
+    </div>
+    <div class="form-group row">
+        <label for="amazon-sellout-file" class="col-sm-2 col-form-label">File: </label>
+        <div class="col-sm-10">
+            <input type="file" class="form-control-file" name="amazon-sellout-file" id="amazon-sellout-file">
+        </div>
+    </div>
+    <div id="upload-status"></div>
+    <h2>Header Check</h2>
+    <div id="header-response"></div>
+    <h2>ASIN Check</h2>
+    <div id="asin-response"></div>
+    <button type="submit" value="Upload" class="btn btn-primary" id="submit" style="display:none;" onclick="changeSubmissionState()">Submit</button>
+</form>
+
+{% endblock %}
+
+{% block script %}
+<script>
+$('form').submit(function() {
+    $(this).find("button[type='submit']").html('Uploading');
+    $(this).find("button[type='submit']").prop('disabled',true);
+});
+$(document).on('change','#amazon-sellout-file' , function(){ 
+    $('#upload-status').html('<div class="alert alert-info">Checking uploaded file, please wait</div>');
+    var amazonSelloutForm = new FormData();
+    amazonSelloutForm.append('amazon-sellout-file', $('#amazon-sellout-file').prop('files')[0]);
+    var amazonSelloutRequest = new XMLHttpRequest();
+    amazonSelloutRequest.open("POST", "/amazon-sellout/upload-check");
+    amazonSelloutRequest.send(amazonSelloutForm);
+    amazonSelloutRequest.onreadystatechange = function() {
+        if(this.readyState == 4 && this.status == 200) {
+            $('#upload-status').html('<div class="alert alert-success">Uploading completed</div>');
+            amazonSelloutResponse = JSON.parse(amazonSelloutRequest.response);
+            // Header check
+            if(amazonSelloutResponse.header == 'pass') {
+                $('#header-response').html('<div class="alert alert-success">Header check - ok</div>');
+                
+            }
+            else if(!amazonSelloutResponse.header){
+                $('#header-response').text('Please fix the error above to perform header check.');
+            }
+            else {
+                $('#header-response').html('<div class="alert alert-danger">The following column name is not correct (date must be format like 1989-08-24)</div>');
+                for (var i in amazonSelloutResponse.header) {
+                    $('#header-response').append('<div>'+ amazonSelloutResponse.header[i] +'</div>');
+                }
+                $('#amazon-sellout-file').val('');
+            }
+            // SKU check
+            if(amazonSelloutResponse.asin == 'pass') {
+                $('#asin-response').html('<div class="alert alert-success">ASIN check - ok</div>');
+            }
+            else if(!amazonSelloutResponse.asin){
+                $('#asin-response').text('Please fix the error above to perform asin check');
+            }
+            else {
+                $('#asin-response').append('<div class="alert alert-danger">The following ASIN are not found in the system. Please modify your submission, or contact james.guo@tp-link.com</div>');
+                for (var i in amazonSelloutResponse.asin) {
+                    $('#asin-response').append('<div>'+ amazonSelloutResponse.asin[i] +'<div>');
+                }
+                $('#amazon-sellout-file').val('');
+            }
+            if (
+                amazonSelloutResponse.header == 'pass' && 
+                amazonSelloutResponse.asin == 'pass' 
+            ) {
+                $('#submit').show();
+            }
+        } else {
+            $('#upload-status').html('Error in submitting, please retry. If the problem exists, please contact james.guo@tp-link.com');
+        }
+    } // amazonSelloutRequest.onreadystatechange
+}); // On change
+</script>
+{% endblock %}

@@ -2116,89 +2116,6 @@ def uploadStock():
             user = user, 
         )
 
-# @app.route('/sellout/upload', methods=['GET', 'POST'])
-# @login_required('uploader')
-# def UploadSellout():
-#     if request.method == 'POST':
-#         sellout_report = request.form.get('sellout-report')
-#         lines = sellout_report.splitlines()
-#         upload_error = False
-#         unmapped_skus = set()
-#         unmapped_names = set()
-#         unmapped = session.query(
-#                 SkuToProduct
-#             ).filter(
-#                 SkuToProduct.product_id == None
-#             ).all()
-#         if unmapped:
-#             flash('Please map all sku first')
-#             return redirect('/')
-#         for line in lines[1:]:
-#             if not line:
-#                 continue
-#             line = line.upper()
-#             splitted = line.split('\t')
-#             date, sku_raw, account_name, sellout = splitted
-#             if not sku_raw:
-#                 continue
-#             try: 
-#                 nameToAccount = session.query(
-#                         NameToAccount
-#                     ).filter(
-#                         NameToAccount.name == account_name
-#                     ).first()
-#                 if not nameToAccount:
-#                     unmapped_names.add(account_name)
-#                     raise NameError('Account %s not found'%account_name)
-#                 else:
-#                     account = nameToAccount.account
-#                 date = datetime.strptime(date, "%Y-%m-%d").date()
-#                 skuToProduct = session.query(SkuToProduct).filter_by(sku=sku_raw).first()
-#                 if not skuToProduct:
-#                     unmapped_skus.add(sku_raw)
-#                     raise NameError('SKU %s not found'%sku_raw)
-#                 else:
-#                     product = skuToProduct.product
-#                 try:
-#                     sellout = int(sellout)
-#                 except ValueError:
-#                     sellout = 0
-#             except (NameError, ValueError) as e:
-#                 upload_error = True
-#                 print(str(e))
-#             else: 
-#                 newRow = Sellout(
-#                     date = date, 
-#                     product_id = product.id, 
-#                     account_id = account.id, 
-#                     sellout = sellout,
-#                     total = sellout*product.distri_cost, 
-#                 )
-#                 session.add(newRow)
-#         if not upload_error:
-#             session.commit()
-#             flash('Successfully uploaded')
-#         else:
-#             session.rollback()
-#             for unmapped_sku in unmapped_skus: 
-#                 newSkuToProduct = SkuToProduct(
-#                     sku = unmapped_sku, 
-#                 )
-#                 session.add(newSkuToProduct)
-#             for unmapped_name in unmapped_names: 
-#                 newNameToAccount = NameToAccount(
-#                     name = unmapped_name, 
-#                 )
-#                 session.add(newNameToAccount)
-#             session.commit()
-#             flash('Upload error')
-#         return redirect('/')
-#     else:
-#         return render_template(
-#             'sellout_upload.html', 
-#             login = login_session, 
-#         )
-
 @app.route('/account/upload-check', methods=['POST'])
 @login_required(['admin'])
 def accountUploadCheck():
@@ -2323,6 +2240,97 @@ def uploadCustomer():
     else:
         return render_template(
             'account_upload.html', 
+            login = login_session, 
+            user = user, 
+        )
+
+@app.route('/amazon-sellout/upload-check', methods=['POST'])
+@login_required(['admin', 'uploader'])
+def amazonSelloutUploadCheck():
+    user = getUserById(login_session['id'])
+    response = {}
+    amazon_sellout_file = request.files.get('amazon-sellout-file')
+    amazon_sellout_df = pd.read_excel(amazon_sellout_file)
+    # Check whether header in submission is ok
+    header = amazon_sellout_df.columns
+    if header[0] != 'ASIN':
+        response['header'] = {0: 'First column name must be ASIN'}
+        return simplejson.dumps(response)
+    date_header_raw = header[1:]
+    date_header = pd.to_datetime(date_header_raw, format='%Y-%m-%d', errors='coerce')
+    header_err = date_header_raw[date_header.isna()]
+    if not header_err.empty: 
+        response['header'] = header_err.to_dict()
+        return simplejson.dumps(response)
+    else:
+        response['header'] = 'pass'
+    amazon_sellout_df.rename(columns = {
+            'ASIN': 'asin', 
+        }, inplace = True)
+    # Check whether all ASINs are mapped
+    asins = pd.unique(amazon_sellout_df['asin'])
+    asins = pd.Series(asins)
+    unmapped_asins = get_unmapped_sku(asins.apply(lambda x: 'AMAZON-{}'.format(str(x).strip().upper())))
+    if not unmapped_asins.empty:
+        response['asin'] = unmapped_asins.to_dict()
+        return simplejson.dumps(response)
+    else: 
+        response['asin'] = 'pass'
+    return simplejson.dumps(response)
+
+@app.route('/amazon-sellout/upload', methods=['GET', 'POST'])
+@login_required(['admin', 'uploader'])
+def uploadAmazonSellout():
+    user = getUserById(login_session['id'])
+    if request.method == 'POST':
+        amazon = session.query(
+                Account
+            ).filter(
+                Account.name == 'AMAZON {}'.format(user.country)
+            ).first()
+        if not amazon:
+            flash('Please set up AMAZON {} as an account first'.format(user.country))
+            return redirect('/')
+        amazon_sellout_file = request.files.get('amazon-sellout-file')
+        amazon_sellout_df = pd.read_excel(amazon_sellout_file)
+        amazon_sellout_df.rename(columns = {
+                'ASIN': 'asin', 
+            }, inplace = True)
+        # Remove duplicated ASIN
+        amazon_sellout_df.drop_duplicates(subset='asin', inplace=True)
+        amazon_sellout_df.rename(columns=lambda x: pd.to_datetime(x, format='%Y-%m-%d', errors='ignore'), inplace=True)
+        date_header = amazon_sellout_df.columns[1:]
+        # date_header = pd.to_datetime(date_header, format='%Y-%m-%d', errors='coerce')
+        amazon_sellout_df['sku'] = amazon_sellout_df['asin'].apply(lambda x: 'AMAZON-{}'.format(str(x).strip().upper()))
+        result = session.query(
+                SkuToProduct.sku.label('sku'), 
+                SkuToProduct.product_id.label('product_id')
+            )
+        result_df = pd.read_sql(result.statement, result.session.bind)
+        amazon_sellout_df = amazon_sellout_df.merge(result_df, on='sku', how='left')
+        for sellout_date in date_header:
+            result = session.query(
+                    Sellout
+                ).filter(
+                    Sellout.account_id == amazon.id, 
+                    Sellout.date == sellout_date, 
+                ).first()
+            if result:
+                continue
+            for index, row in amazon_sellout_df.iterrows():
+                newSellout = Sellout(
+                       date = sellout_date, 
+                       qty = row[sellout_date], 
+                       account_id = amazon.id, 
+                       product_id = row.product_id, 
+                    )
+                session.add(newSellout)
+            session.commit()
+        flash('Successfully uploaded')
+        return redirect('/')
+    else:
+        return render_template(
+            'amazon_sellout_upload.html', 
             login = login_session, 
             user = user, 
         )
