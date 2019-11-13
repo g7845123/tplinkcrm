@@ -154,18 +154,10 @@ def mainPage():
     products = session.query(
             Product
         )
-    sellout_accounts = accounts.filter(
-            Account.id == Sellout.account_id
-        )
     managers = session.query(
             User
         ).filter(
             User.id == Account.user_id
-        )
-    distributors = session.query(
-            Account
-        ).filter(
-            Account.type == "DISTRIBUTOR"
         )
     result = session.query(
             Sellin
@@ -181,10 +173,7 @@ def mainPage():
     user = getUserById(login_session['id'])
     return render_template(
         'index.html', 
-        sellout_accounts = sellout_accounts, 
         managers = managers, 
-        products = products, 
-        distributors = distributors, 
         login = login_session, 
         report_range = report_range, 
         country = user.country, 

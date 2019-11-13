@@ -32,14 +32,16 @@
     <a href="/price/query" class="btn btn-primary">Query</a>
     <a href="/pricelink/edit" class="btn btn-primary">Edit Links</a>
 
+<!--
     <h2>Distributor Stock Report</h2>
     <a href="/stock/dashboard" class="btn btn-primary">Dashboard</a>
     <a href="/stock/query" class="btn btn-primary">Query</a>
 
-    <h2>Sales Report</h2>
     <a href="/sellin/dashboard" target="_blank" class="btn btn-primary">Dashboard</a>
     <a href="/report-by-account/start" target="_blank" class="btn btn-primary">Customized Report by Account</a>
     <br><br>
+-->
+    <h2>Sales Report</h2>
     <label for="account-search">View by Account</label>
     <form class="form-group" id="account-search" method="GET" action="/account/search">
     <div class="input-group col-md-9">
@@ -55,13 +57,13 @@
     <h2>Geographic Analysis</h2>
     <a href="/customerfinder/start" class="btn btn-primary">Customer Finder</a>
 
-    <h2>Operational Measurement</h2>
-    <a href="/operational/dashboard" class="btn btn-primary">Dashboard</a>
-
     <h2>Download product info</h2>
     <a href="/product/download" class="btn btn-primary">Product Info</a>
 
 <!--
+    <h2>Operational Measurement</h2>
+    <a href="/operational/dashboard" class="btn btn-primary">Dashboard</a>
+
     <div>
         <label for="account-detail">View by Account</label>
         <select id="account-detail" name="account-detail"></select>
@@ -102,55 +104,6 @@
 <script src="{{url_for('static', filename='js/select2.min.js')}}"></script>
 
 <script>
-var select2 = $("#sellout-yoy-accounts").select2({
-    placeholder: "Select an account",
-    width: '50%', 
-});
-select2.on("select2:select", function () { 
-    var account_id = $("#sellout-yoy-accounts").select2("data")[0].id;
-    window.location.href = '/sellout/dashboard-yoy?account=' + account_id; 
-});
-var select2 = $("#distri-woc").select2({
-    placeholder: "Select a distributor",
-    width: '50%', 
-});
-select2.on("select2:select", function () { 
-    var account_id = $("#distri-woc").select2("data")[0].id;
-    window.location.href = '/woc/download?account=' + account_id; 
-});
-var select2 = $("#sellout-products").select2({
-    placeholder: "Select a product",
-    width: '50%', 
-});
-select2.on("select2:select", function () { 
-    var product_id = $("#sellout-products").select2("data")[0].id;
-    window.location.href = '/sellout/query?product=' + product_id; 
-});
-var select2 = $("#account-detail").select2({
-    placeholder: "Select an account",
-    width: '50%', 
-    ajax: {
-        url: "/account/query",
-        dataType: 'json',
-        delay: 250,
-        data: function (params) {
-            var query = {
-                name: params.term,
-            }
-            // Query paramters will be ?name=[term]
-            return query;
-        }, 
-        processResults: function (data) {
-            return {
-                results: data
-            }
-        }, 
-    },
-});
-select2.on("select2:select", function () { 
-    var account_id = $("#account-detail").select2("data")[0].id;
-    window.location.href = '/account/' + account_id + '?start={{report_range[0].isoformat()}}&end={{report_range[1].isoformat()}}'; 
-});
 var select2 = $("#manager").select2({
     placeholder: "Select a Manager",
     width: '50%', 
