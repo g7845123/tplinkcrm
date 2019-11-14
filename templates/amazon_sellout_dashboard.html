@@ -1,0 +1,63 @@
+{% extends "template.html" %}
+{% block content %}
+    <h1 class="page-header">
+        AMAZON {{country}} Sellout Dashboard
+    </h1>
+    <p>Last update: {{last_day}}</p>
+    <div class="input-group col-md-12">
+        <input type="text" id="search-sku" class="search-query form-control" onkeyup="searchSku()" placeholder="Search for SKU">
+        <span class="input-group-btn">
+            <button class="btn btn-info" type="button">
+                <span class="glyphicon glyphicon-search"></span>
+            </button>
+        </span>
+    </div>
+    <table class="table table-striped" id="sellout-table">
+        <thead>
+            <tr>
+                <th>SKU</th>
+                <th>D90 Forecast</th>
+                <th>D30 Forecast</th>
+                <th>D7 Forecast</th>
+                <th>D7 - D90</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for id, data in sellout_df.iterrows() %}
+            <tr>
+                <td>{{data['sku']}}</td>
+                <td>{{data['d90']}}</td>
+                <td>{{data['d30']}}</td>
+                <td>{{data['d7']}}</td>
+                <td>{{data['d7']-data['d90']}}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
+
+
+{% block script %}
+<script>
+function searchSku() {
+    // Declare variables 
+    var input, filter, table, tr, td, i;
+    input = document.getElementById("search-sku");
+    filter = input.value.toUpperCase();
+    table = document.getElementById("sellout-table");
+    tr = table.getElementsByTagName("tr");
+  
+    // Loop through all table rows, and hide those who don't match the search query
+    for (i = 0; i < tr.length; i++) {
+        td = tr[i].getElementsByTagName("td")[0];
+        if (td) {
+            if (td.innerHTML.toUpperCase().indexOf(filter) > -1) {
+                tr[i].style.display = "";
+            } else {
+                tr[i].style.display = "none";
+            }
+        } 
+    }
+}
+</script>
+{% endblock %}

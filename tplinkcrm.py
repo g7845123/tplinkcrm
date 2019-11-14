@@ -179,6 +179,82 @@ def mainPage():
         country = user.country, 
     )
 
+@app.route('/amazon-sellout/dashboard')
+@login_required(['DE'])
+def amazonSelloutDashboard():
+    user = getUserById(login_session['id'])
+    result = session.query(
+            Account
+        ).filter(
+            Account.name == 'AMAZON {}'.format(user.country)
+        ).first()
+    amazon_id = result.id
+    result = session.query(
+            Product.sku.label('sku'), 
+            Product.id.label('product_id'), 
+        )
+    sellout_df = pd.read_sql(result.statement, result.session.bind)
+    result = session.query(
+            Sellout.product_id.label('product_id'), 
+            Sellout.date.label('date'), 
+            Sellout.qty.label('qty'), 
+        ).filter(
+            Sellout.account_id == amazon_id
+        ).order_by(
+            Sellout.date.desc()
+        )
+    last_day = result.first().date
+    # last 90 day
+    first_day = last_day - timedelta(days=90)
+    result = result.filter(
+            Sellout.date > first_day, 
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    result_df = result_df.groupby('product_id').sum()
+    result_df['qty'] = result_df['qty'] / 90 * 30
+    result_df['qty'] = result_df['qty'].astype(int)
+    result_df.rename(columns = {
+            'qty': 'd90', 
+        }, inplace = True)
+    sellout_df = sellout_df.merge(result_df, on='product_id', how='left')
+    # remove product without sellout
+    sellout_df = sellout_df[~sellout_df['d90'].isna()]
+    # last 30 day
+    first_day = last_day - timedelta(days=30)
+    result = result.filter(
+            Sellout.date > first_day, 
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    result_df = result_df.groupby('product_id').sum()
+    result_df['qty'] = result_df['qty'].astype(int)
+    result_df.rename(columns = {
+            'qty': 'd30', 
+        }, inplace = True)
+    sellout_df = sellout_df.merge(result_df, on='product_id', how='left')
+    # last 7 day
+    first_day = last_day - timedelta(days=7)
+    result = result.filter(
+            Sellout.date > first_day, 
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    result_df = result_df.groupby('product_id').sum()
+    result_df['qty'] = result_df['qty'] / 7 * 30
+    result_df['qty'] = result_df['qty'].astype(int)
+    result_df.rename(columns = {
+            'qty': 'd7', 
+        }, inplace = True)
+    sellout_df = sellout_df.merge(result_df, on='product_id', how='left')
+    # Sort by D7-D90 Gap
+    sellout_df['weight'] = abs(sellout_df['d7']-sellout_df['d90'])
+    sellout_df.sort_values(by='weight', ascending=False, inplace=True) 
+    return render_template(
+        'amazon_sellout_dashboard.html', 
+        login = login_session, 
+        country = user.country, 
+        sellout_df = sellout_df, 
+        last_day = last_day, 
+    )
+
 @app.route('/operational/dashboard')
 @login_required(['ES', 'DE'])
 def operationalDashboard():
