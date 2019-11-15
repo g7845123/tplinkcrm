@@ -1,0 +1,138 @@
+{% extends "template.html" %}
+{% block content %}
+    <h1 class="page-header">
+        {{sku}} AMAZON {{country}} Sellout
+    </h1>
+    <h2>D1 Sellout</h2>
+    <div id="d1-sellout" style="height: 400px"></div>
+    <h2>D7 Sellout</h2>
+    <div id="d7-sellout" style="height: 400px"></div>
+    <h2>D30 Sellout</h2>
+    <div id="d30-sellout" style="height: 400px"></div>
+{% endblock %}
+
+
+{% block script %}
+<!-- Resources -->
+<script src="{{url_for('static', filename='highcharts/highcharts.js')}}"></script>
+
+<script>
+// D1 Sellout
+$(function () {
+    Highcharts.chart('d1-sellout', {
+        chart: {
+            zoomType: 'x', 
+        },
+        title: {
+            text: '{{sku}} D1 Sellout'
+        },
+        xAxis: {
+            type: 'datetime',
+            title: {
+                text: 'Date'
+            }
+        },
+        yAxis: {
+            title: {
+                text: 'Qty'
+            },
+            allowDecimals: false,
+            min: 0
+        },
+        legend: {
+            enabled: false
+        },
+        series: [
+            {
+                name: 'Qty',
+                data: [
+                    // Date.UTC() in JS use 0-11 to represent month
+                    {% for idx, row in d1_sellout_df.iterrows() %}
+                      [Date.UTC({{idx.year}}, {{idx.month-1}}, {{idx.day}}), {{row.qty}}],
+                    {% endfor %}
+                ]
+            }, 
+        ]
+    });
+});
+
+// D7 Sellout
+$(function () {
+    Highcharts.chart('d7-sellout', {
+        chart: {
+            zoomType: 'x', 
+        },
+        title: {
+            text: '{{sku}} D7 Sellout'
+        },
+        xAxis: {
+            type: 'datetime',
+            title: {
+                text: 'Date'
+            }
+        },
+        yAxis: {
+            title: {
+                text: 'Qty'
+            },
+            allowDecimals: false,
+            min: 0
+        },
+        legend: {
+            enabled: false
+        },
+        series: [
+            {
+                name: 'Qty',
+                data: [
+                    // Date.UTC() in JS use 0-11 to represent month
+                    {% for idx, row in d7_sellout_df.iterrows() %}
+                      [Date.UTC({{idx.year}}, {{idx.month-1}}, {{idx.day}}), {{row.qty}}],
+                    {% endfor %}
+                ]
+            }, 
+        ]
+    });
+});
+
+// D30 Sellout
+$(function () {
+    Highcharts.chart('d30-sellout', {
+        chart: {
+            zoomType: 'x', 
+        },
+        title: {
+            text: '{{sku}} D30 Sellout'
+        },
+        xAxis: {
+            type: 'datetime',
+            title: {
+                text: 'Date'
+            }
+        },
+        yAxis: {
+            title: {
+                text: 'Qty'
+            },
+            allowDecimals: false,
+            min: 0
+        },
+        legend: {
+            enabled: false
+        },
+        series: [
+            {
+                name: 'Qty',
+                data: [
+                    // Date.UTC() in JS use 0-11 to represent month
+                    {% for idx, row in d30_sellout_df.iterrows() %}
+                      [Date.UTC({{idx.year}}, {{idx.month-1}}, {{idx.day}}), {{row.qty}}],
+                    {% endfor %}
+                ]
+            }, 
+        ]
+    });
+});
+
+</script>
+{% endblock %}

@@ -20,6 +20,7 @@
                 <th>D30 Forecast</th>
                 <th>D7 Forecast</th>
                 <th>D7 - D90</th>
+                <th>Detail</th>
             </tr>
         </thead>
         <tbody>
@@ -30,6 +31,7 @@
                 <td>{{data['d30']}}</td>
                 <td>{{data['d7']}}</td>
                 <td>{{data['d7']-data['d90']}}</td>
+                <td><a href="/amazon-sellout/detail?product={{data.product_id}}">View Detail</a></td>
             </tr>
             {% endfor %}
         </tbody>

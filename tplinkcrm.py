@@ -255,6 +255,54 @@ def amazonSelloutDashboard():
         last_day = last_day, 
     )
 
+@app.route('/amazon-sellout/detail')
+@login_required(['DE'])
+def amazonSelloutDetail():
+    user = getUserById(login_session['id'])
+    product_id = request.args.get('product')
+    result = session.query(
+            Account
+        ).filter(
+            Account.name == 'AMAZON {}'.format(user.country)
+        ).first()
+    amazon_id = result.id
+    result = session.query(
+            Product
+        ).filter(
+            Product.id == product_id
+        ).first()
+    sku = result.sku
+    result = session.query(
+            Sellout.date.label('date'), 
+            func.sum(Sellout.qty).label('qty'), 
+        ).filter(
+            Sellout.product_id == product_id, 
+            Sellout.account_id == amazon_id, 
+        ).group_by(
+            'date'
+        ).order_by(
+            'date'
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    result_df['date'] = pd.to_datetime(result_df['date'])
+    result_df.set_index('date', inplace=True)
+    # D1 Sellout
+    d1_sellout_df = result_df
+    row_count = result_df.shape[0]
+    # D7 Sellout
+    d7_sellout_df = result_df[row_count%7:].resample('7D').sum()
+    # D30 Sellout
+    d30_sellout_df = result_df[row_count%30:].resample('30D').sum()
+    return render_template(
+        'amazon_sellout_detail.html', 
+        login = login_session, 
+        country = user.country, 
+        sku = sku, 
+        d1_sellout_df = d1_sellout_df, 
+        d7_sellout_df = d7_sellout_df, 
+        d30_sellout_df = d30_sellout_df, 
+    )
+
 @app.route('/operational/dashboard')
 @login_required(['ES', 'DE'])
 def operationalDashboard():
