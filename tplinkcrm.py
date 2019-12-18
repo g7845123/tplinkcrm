@@ -484,32 +484,58 @@ def invoiceUpload():
 @app.route('/interaction/dashboard')
 @login_required(['admin', 'manager'])
 def interactionDashboard():
+    result = session.query(
+            Sellin
+        ).order_by(
+            Sellin.date.desc()
+        ).first()
+    report_day_start = date(result.date.year, 1, 1)
+    last_day = monthrange(result.date.year, result.date.month)[1]
+    report_day_end = date(result.date.year, result.date.month, last_day)
     user = getUserById(login_session['id'])
-    date_start = request.args.get('start')
-    date_start = parsing_date(date_start)
-    date_end = request.args.get('end')
-    date_end = parsing_date(date_end)
-    interactions = session.query(
+    interaction_day_start = request.args.get('start')
+    interaction_day_start = parsing_date(interaction_day_start)
+    interaction_day_end = request.args.get('end')
+    interaction_day_end = parsing_date(interaction_day_end)
+    result = session.query(
             AccountNote.id.label('id'), 
             AccountNote.created.label('date'), 
             Account.name.label('account'), 
+            Account.type.label('type'), 
+            Account.id.label('account_id'), 
             User.name.label('manager'), 
-            AccountNote.type.label('type'), 
+            AccountNote.type.label('interaction'), 
             AccountNote.note.label('note'), 
         ).filter(
             AccountNote.account_id == Account.id, 
             AccountNote.user_id == User.id, 
             AccountNote.type.in_(['CALL', 'MEETING', 'EMAIL']), 
-            AccountNote.created >= date_start, 
-            AccountNote.created <= date_end, 
+            AccountNote.created >= interaction_day_start, 
+            AccountNote.created <= interaction_day_end, 
             User.country == user.country, 
         ).order_by(
             AccountNote.created.desc(),     
         )
+    interaction_df = pd.read_sql(result.statement, result.session.bind)
+    account_ids = interaction_df.account_id.drop_duplicates()
+    result = session.query(
+            Account.id.label('account_id'), 
+            func.sum(Sellin.unit_price * Sellin.qty).label('revenue'), 
+        ).filter(
+            Sellin.account_id == Account.id, 
+            Sellin.date >= report_day_start, 
+            Sellin.date <= report_day_end, 
+        ).group_by(
+            Account.id, 
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    interaction_df = interaction_df.merge(result_df, on='account_id', how='left')
     return render_template(
         'interaction_dashboard.html', 
         login = login_session, 
-        interactions = interactions, 
+        interaction_df = interaction_df, 
+        report_day_start = report_day_start, 
+        report_day_end = report_day_end, 
     )
 
 # @app.route('/operational/download')

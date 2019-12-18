@@ -18,25 +18,37 @@
         <tr>
             <th>Date</th>
             <th>Account</th>
-            <th>Manager</th>
+            <th>YTD Revenue</th>
             <th>Type</th>
+            <th>Manager</th>
+            <th>Interaction</th>
             <th>Note</th>
             <th>Detail</th>
         </tr>
     </thead>
     <tbody>
-        {% for row in interactions %}
+        {% for idx, row in interaction_df.iterrows() %}
         <tr>
             <td>{{row['date'].strftime('%Y-%m-%d')}}</td>
-            <td>{{row['account']}}</td>
-            <td>{{row['manager']}}</td>
+            <td>
+                <a href="/account/{{row.account_id}}?start={{report_day_start.strftime('%Y-%m-%d')}}&end={{report_day_end.strftime('%Y-%m-%d')}}" target="_blank">
+                    {% if row.account|length < 20 %}
+                    {{row['account']}}
+                    {% else %}
+                    {{row['account'][:20]+'...'}}
+                    {% endif %}
+                </a>
+            </td>
+            <td>{{row['revenue'] / 100}}</td>
             <td>{{row['type']}}</td>
+            <td>{{row['manager']}}</td>
+            <td>{{row['interaction']}}</td>
             {% if row.note|length < 50 %}
             <td>{{row.note[:50]}}</td>
             {% else %}
             <td>{{row.note[:50]+'...'}}</td>
             {% endif %}
-            <td><a href="#" onclick="note{{row.id}}Show(); return false;">Show Note</a></td>
+            <td><a href="#" onclick="note{{idx}}Show(); return false;">Show Note</a></td>
         </tr>
         {% endfor %}
     </tbody>
@@ -46,8 +58,8 @@
 
 {% block script %}
 <script>
-{% for row in interactions %}
-var note{{row.id}}Show = function() {
+{% for idx, row in interaction_df.iterrows() %}
+var note{{idx}}Show = function() {
     var modalBody = $('#modal-body');
     modalBody.html(`{{row.note}}`);
     $('#modal').modal('show');
