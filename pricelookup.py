@@ -6,14 +6,25 @@ from database_setup import Base, PriceLink, PriceHistory
 
 import requests
 from bs4 import BeautifulSoup
+from stem import Signal
+from stem.control import Controller
+from fake_headers import Headers
 
-import time
-from datetime import datetime
+import random, time
+from datetime import datetime, timedelta
 import argparse
 
 import re
 
 from price_util import query_online_price
+
+# The script will be triggered by Cron, add random delay to make it's irregular
+wait = random.uniform(0, 2*60*60)
+time.sleep(wait)
+print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
+error_count = 0
+try_left = 100
 
 parser = argparse.ArgumentParser()
 parser.add_argument('account')
@@ -22,7 +33,6 @@ args = parser.parse_args()
 account = args.account
 country = args.country
 
-start_time = time.time()
 
 # Connect to Database and create database session
 engine = create_engine('postgresql://{}:{}@{}'.format(DB_USERNAME, DB_PASSOWRD, DB_PATH))
@@ -31,34 +41,66 @@ Base.metadata.bind = engine
 DBSession = sessionmaker(bind=engine)
 session = DBSession()
 
+result = session.query(
+        PriceHistory
+    ).filter(
+        datetime.now() - PriceHistory.timestamp < timedelta(seconds=43200)
+    )
+links_with_record = [e.price_link_id for e in result]
+
 price_links = session.query(
         PriceLink
     ).filter(
         PriceLink.account == account, 
         PriceLink.country == country, 
-    ).order_by(
-        PriceLink.product_id
     ).all()
-    # .filter(
-    #     Product.id == PriceLink.product_id, 
-    #     PriceLink.account == 'MM', 
-    # ).all()
 
+fake_header = Headers(headers=True).generate()
+proxies = None
 for price_link in price_links:
+    if price_link.id in links_with_record:
+        print('Link already with record, skip. {}'.format(price_link.link))
+        continue
+    time.sleep(1)
+    if try_left <= 0:
+        print('Max try count reached, quit program')
+        quit()
     account = price_link.account
     link = price_link.link
     try: 
-        price = query_online_price(country, account, link)
+        price = query_online_price(country, account, link, fake_header, proxies)
     except:
         price = None
-    if price == None:
+    if price:
+        error_count = 0
+        newRow = PriceHistory(
+            timestamp = datetime.now(), 
+            price_link_id = price_link.id, 
+            price = price, 
+        )
+        session.add(newRow)
+        session.commit()
+    elif error_count < 3:
+        error_count += 1
         continue
-    newRow = PriceHistory(
-        timestamp = datetime.utcnow(), 
-        price_link_id = price_link.id, 
-        price = price, 
-    )
-    session.add(newRow)
-    session.commit()
-    time.sleep(1)
+    else:
+        # possible be blocked
+        print('Error detected, use new user agent and new IP')
+        error_count += 1
+        try_left -= 1
+        price_links.append(price_link)
+        fake_header = Headers(headers=True).generate()
+        print('New user agent: {}'.format(fake_header))
+        with Controller.from_port(port = 9051) as c:
+            c.authenticate()
+            c.signal(Signal.NEWNYM)
+        proxies = {
+            'http': 'socks5://127.0.0.1:9050',
+            'https': 'socks5://127.0.0.1:9050'
+        }
+        new_ip = requests.get('https://ident.me', proxies=proxies).text
+        print('New IP: {}'.format(new_ip))
+        if error_count > 10:
+            print("Possible block by {} was detected, quit program".format(account))
+            quit()
 

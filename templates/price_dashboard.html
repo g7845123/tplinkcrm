@@ -52,18 +52,18 @@
     <h3>Product with Low Price</h2>
     {% if not df_low.empty %}
     <div class="alert alert-danger" role="alert">
-        <strong>Warning!</strong> Please pay special attention to the following products as PVP is lower than expected
+        <strong>Warning!</strong> Please pay special attention to the following products as price is lower than LEP (Lowest Expected Price)
     </div>
     <table class="table table-striped">
         <thead>
             <tr>
                 <th>SKU</th>
-                <th>Distri</th>
-                <th>Gap</th>
                 {% for account in accounts %}
                 <th>{{account}}</th>
                 {% endfor %}
                 <th>Min</th>
+                <th>LEP</th>
+                <th>Gap</th>
                 <th>History</th>
             </tr>
         </thead>
@@ -71,12 +71,12 @@
             {% for product_id, data in df_low.iterrows() %}
             <tr>
                 <td>{{data['sku']}}</td>
-                <td>{{data['distri_cost']/100}}</td>
-                <td>{{"{:.1%}".format(data['gap'])}}</td>
                 {% for account in accounts %}
                 <td><a href="{{data[account].link}}" target="_blank">{{data[account].price/100}}</a></td>
                 {% endfor %}
                 <td>{{data['min']/100}}</td>
+                <td>{{data['lep']/100}}</td>
+                <td>{{"{:.1%}".format(data['gap'])}}</td>
                 <td><a href="/price/history?product={{product_id}}" target="_blank">History</a></td>
             </tr>
             {% endfor %}

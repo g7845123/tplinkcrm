@@ -142,7 +142,7 @@ class Product(Base):
     sku = Column(String(255), nullable=False)
     # All price stored in cents
     distri_cost = Column(Integer, nullable=False)
-    msrp = Column(Integer)
+    lep = Column(Integer) # Lowest Expected Price
     ean = Column(String(255))
     asin = Column(String(255))
     bu = Column(String(255))

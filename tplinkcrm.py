@@ -961,20 +961,15 @@ def get_price_info(country):
     result = session.query(
             Product.id.label('product_id'), 
             Product.sku.label('sku'), 
-            Product.distri_cost.label('distri_cost'), 
-            Product.msrp.label('msrp'), 
+            Product.lep.label('lep'), 
             Product.focused.label('focused'), 
         )
     product_df = pd.read_sql(result.statement, result.session.bind)
     product_df = product_df.set_index('product_id')
     df = df.join(product_df)
-    df['diff'] = 1 - df['min']*1./df['msrp']
-    if country == 'ES':
-        tax_rate = ES_TAX_RATE
-    if country == 'DE':
-        tax_rate = DE_TAX_RATE
-    df['gap'] = df['min']/tax_rate / df['distri_cost'] - 1
-    low_flag = df['gap'] < LOWEST_CHANNEL_MARGIN
+    df['gap'] = 1 - df['min']*1./df['lep']
+    low_flag = df['min'] < df['lep']
+    df.sort_values(by='gap', ascending=False, inplace=True) 
     return accounts, low_flag, df
 
 @app.route('/price/dashboard')
@@ -1001,7 +996,7 @@ def priceDashboard():
         'price_dashboard.html', 
         login = login_session, 
         accounts = accounts, 
-        df_low = df[low_flag].sort_values(by='gap'), 
+        df_low = df[low_flag], 
         df = df,
         products = products, 
         product_id = product_id, 

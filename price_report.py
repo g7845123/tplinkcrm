@@ -60,7 +60,7 @@ for user in result:
     body = template.render(
             user_name = user.name, 
             accounts = accounts, 
-            df_low = df[low_flag].sort_values(by='gap'), 
+            df_low = df[low_flag], 
             df = df,
         )
     send_email(EMAIL_USERNAME, EMAIL_PASSWORD, recipient, subject, body)
