@@ -2736,13 +2736,20 @@ def uploadAccountDetail():
                 ).first()
             if row.tax:
                 account.tax = row.tax
-            if row.street:
-                account.street = row.street
-            if row.postcode:
-                account.postcode = row.postcode
-            if row.city:
-                account.city = row.city
-            session.add(account)
+            # When detail address already exists, only replace when uploaded address is completed
+            if account.street and account.postcode and account.city:
+                if row.street and row.postcode and row.city:
+                    account.street = row.street
+                    account.postcode = row.postcode
+                    account.city = row.city
+            else:
+                if row.street:
+                    account.street = row.street
+                if row.postcode:
+                    account.postcode = row.postcode
+                if row.city:
+                    account.city = row.city
+        session.add(account)
         session.commit()
         flash('Successfully uploaded')
         return redirect('/')
