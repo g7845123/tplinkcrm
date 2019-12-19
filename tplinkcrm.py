@@ -4214,6 +4214,7 @@ def viewAccount(account_id):
                 past_365_days_revenue = past_365_days_revenue, 
                 account_partner_all = ACCOUNT_PARTNER_ALL, 
                 account_partner_db = account_partner_db, 
+                INTERACTION_TYPE_ALL = INTERACTION_TYPE_ALL, 
             )
 
 @app.route('/manager/<int:manager_id>')

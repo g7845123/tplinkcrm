@@ -276,7 +276,9 @@ var adaptiveTextarea = function() {
         this.style.height = 'auto';
         this.style.height = this.scrollHeight + 'px';
     });
-    $('select').select2();
+    $('select').select2({
+        dropdownParent: $('#form-modal')
+    });
 }
 adaptiveTextarea();
 var newNote = function() {
@@ -286,10 +288,9 @@ var newNote = function() {
             <label for="type">Type</label>
             <select class="form-control" name="type" id="note-type">
                 <option id='note-type-default' selected>Choose a note type</option>
-                <option value="MEETING">Meeting</option>
-                <option value="CALL">Call</option>
-                <option value="EMAIL">Email</option>
-                <option value="INVESTMENT">Investment</option>
+                {% for interaction_type in INTERACTION_TYPE_ALL %}
+                <option value="{{interaction_type}}">{{interaction_type}}</option>
+                {% endfor %}
             </select>
             <label for="note-creator">Creator</label>
             <select class="form-control" name="note-creator">
@@ -304,7 +305,7 @@ var newNote = function() {
     `;
     modalBody.html(newNoteForm);
     $('#form-modal').modal('show');
-    adaptiveTextarea();
+    $('#form-modal').on('shown.bs.modal', adaptiveTextarea);
 };
 var newPrimaryNote = function() {
     var modalBody = $('#modal-body');
@@ -447,7 +448,6 @@ var basicInfoEdit = function() {
     `;
     modalBody.html(basicInfoForm);
     $('#form-modal').modal('show');
-    // adaptiveTextarea();
     $('#form-modal').on('shown.bs.modal', adaptiveTextarea);
 };
 
