@@ -57,6 +57,18 @@
         </span>
     </div>
     </form>
+    <label for="manager">View by Manager </label>
+    <div class="row">
+        <div class="col-md-9">
+            <p id="manager-msg" style="display: none;"></p>
+            <select id="manager">
+                <option></option>
+                {% for manager in managers %}
+                <option value={{manager.id}}>{{manager.name}}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
 
     <h2>Geographic Analysis</h2>
     <a href="/customerfinder/start" class="btn btn-primary">Customer Finder</a>
@@ -71,15 +83,6 @@
     <div>
         <label for="account-detail">View by Account</label>
         <select id="account-detail" name="account-detail"></select>
-    </div>
-    <div>
-        <label for="manager">View by Manager </label>
-        <select id="manager">
-            <option></option>
-            {% for manager in managers %}
-            <option value={{manager.id}}>{{manager.name}}</option>
-            {% endfor %}
-        </select>
     </div>
 
     <h2>Stock Report</h2>
@@ -110,11 +113,15 @@
 <script>
 var select2 = $("#manager").select2({
     placeholder: "Select a Manager",
-    width: '50%', 
+    width: "100%"
 });
 select2.on("select2:select", function () { 
     var manager_id = $("#manager").select2("data")[0].id;
+    var manager_name = $("#manager").select2("data")[0].text;
     window.location.href = '/manager/' + manager_id; 
+    $("#manager").prop("disabled", true);
+    $("#manager-msg").text("Calculating sales data of " + manager_name + ". Please wait. This may take time depending on account number under management");
+    $("#manager-msg").show();
 });
 </script>
 {% endblock %}

@@ -154,11 +154,6 @@ def mainPage():
     products = session.query(
             Product
         )
-    managers = session.query(
-            User
-        ).filter(
-            User.id == Account.user_id
-        )
     result = session.query(
             Sellin
         ).order_by(
@@ -171,6 +166,12 @@ def mainPage():
     if 'email' not in login_session: 
         return redirect(url_for('login', redirecturl = '/'))
     user = getUserById(login_session['id'])
+    managers = session.query(
+            User
+        ).filter(
+            User.id == Account.user_id, 
+            User.country == user.country, 
+        )
     return render_template(
         'index.html', 
         managers = managers, 
@@ -4755,7 +4756,7 @@ class NameToAccountView(ModelView):
     }
 
 class AccountView(ModelView):
-    column_filters = ['name', 'tax', 'type']
+    column_filters = ['name', 'tax', 'type', 'manager.email']
 
 class StockView(ModelView):
     column_filters = ['date', 'product', 'account']
