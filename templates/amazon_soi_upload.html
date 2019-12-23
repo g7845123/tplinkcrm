@@ -1,0 +1,190 @@
+{% extends 'template.html' %}
+{% block content %}
+
+{% block head %}
+<link href="{{url_for('static', filename='datepicker/css/bootstrap-datepicker3.min.css')}}" rel="stylesheet" />
+{% endblock %}
+
+<h1 class="page-header">
+    Upload Amazon SOI (Sell Out and Inventory)
+</h1>
+
+<form class="form-horizontal" action="#" method="POST" enctype="multipart/form-data">
+    <p>Please use the exact template to upload data. <a href="{{url_for('static', filename='download/amazon_soi_template.xlsx')}}">Download Template</a></p>
+    <div class="form-group row">
+        <label for="account-name" class="col-sm-2 col-form-label">Account: </label>
+        <div class="col-sm-10">
+            <input type="text" readonly class="form-control-plaintext" id="account-name" value="AMAZON {{user.country}}">
+        </div>
+        <label for="amazon-soi-date" class="col-sm-2 col-form-label">Date: </label>
+        <div class="col-sm-10">
+            <input type="text" name="amazon-soi-date" id="amazon-soi-date">
+        </div>
+    </div>
+    <div class="form-group row">
+        <label for="amazon-soi-file" class="col-sm-2 col-form-label">File: </label>
+        <div class="col-sm-10">
+            <input type="file" class="form-control-file" name="amazon-soi-file" id="amazon-soi-file">
+        </div>
+    </div>
+    <div id="upload-status"></div>
+    <h2>Date Check</h2>
+    <div id="date-response"></div>
+    <h2>Header Check</h2>
+    <div id="header-response"></div>
+    <h2>Sellout Check</h2>
+    <div id="sellout-response"></div>
+    <h2>Stock Check</h2>
+    <div id="stock-response"></div>
+    <h2>BO Check</h2>
+    <div id="bo-response"></div>
+    <h2>ASIN Check</h2>
+    <div id="asin-response"></div>
+    <h2>Duplication Check</h2>
+    <div id="duplication-response"></div>
+    <button type="submit" value="Upload" class="btn btn-primary" id="submit" style="display:none;" onclick="changeSubmissionState()">Submit</button>
+</form>
+
+{% endblock %}
+
+{% block script %}
+
+<!-- Date-Picker Plugin -->
+<script src="{{url_for('static', filename='datepicker/js/bootstrap-datepicker.min.js')}}"></script>
+<script>
+
+$(document).ready(function() {
+    $('#amazon-soi-date').datepicker({
+        format: "yyyy-mm-dd", 
+        autoclose: true, 
+    });
+});
+
+$('form').submit(function() {
+    $(this).find("button[type='submit']").html('Uploading');
+    $(this).find("button[type='submit']").prop('disabled',true);
+});
+$(document).on('change','#amazon-soi-file' , function(){ 
+    $('#upload-status').html('<div class="alert alert-info">Checking uploaded file, please wait</div>');
+    var amazonSoiForm = new FormData();
+    amazonSoiForm.append('amazon-soi-file', $('#amazon-soi-file').prop('files')[0]);
+    amazonSoiForm.append('amazon-soi-date', $('#amazon-soi-date').val());
+    var amazonSoiRequest = new XMLHttpRequest();
+    amazonSoiRequest.open("POST", "/amazon-soi/upload-check");
+    amazonSoiRequest.send(amazonSoiForm);
+    amazonSoiRequest.onreadystatechange = function() {
+        if(this.readyState == 4 && this.status == 200) {
+            $('#upload-status').html('<div class="alert alert-success">Uploading completed</div>');
+            amazonSoiResponse = JSON.parse(amazonSoiRequest.response);
+            // Date check
+            if(amazonSoiResponse.date == 'pass') {
+                $('#date-response').html('<div class="alert alert-success">Date check - ok</div>');
+                
+            }
+            else if(!amazonSoiResponse.date){
+                $('#date-response').text('Please fix the error above to perform date check.');
+            }
+            else {
+                $('#date-response').html('<div class="alert alert-danger">The format of date' + amazonSoiResponse.date + 'is not correct (date must be format like 1989-08-24)</div>');
+                $('#amazon-soi-file').val('');
+            }
+            // Header check
+            if(amazonSoiResponse.header == 'pass') {
+                $('#header-response').html('<div class="alert alert-success">Header check - ok</div>');
+                
+            }
+            else if(!amazonSoiResponse.header){
+                $('#header-response').text('Please fix the error above to perform header check.');
+            }
+            else {
+                $('#header-response').html('<div class="alert alert-danger">The following column name is not correct (date must be format like 1989-08-24)</div>');
+                for (var i in amazonSoiResponse.header) {
+                    $('#header-response').append('<div>'+ amazonSoiResponse.header[i] +'</div>');
+                }
+                $('#amazon-soi-file').val('');
+            }
+            // Sellout check
+            if(amazonSoiResponse.sellout == 'pass') {
+                $('#sellout-response').html('<div class="alert alert-success">Sellout check - ok</div>');
+            }
+            else if(!amazonSoiResponse.sellout){
+                $('#sellout-response').text('Please fix the error above to perform sellout check');
+            }
+            else {
+                $('#sellout-response').html('<div class="alert alert-danger">Qty must be number. The following lines are invalid</div>');
+                for (var i in amazonSoiResponse.sellout) {
+                    $('#sellout-response').append('<div>Line '+ (parseInt(i)+2) + ': ' + amazonSoiResponse.sellout[i] +'</div>');
+                }
+                $('#amazon-soi-file').val('');
+            }
+            // Stock check
+            if(amazonSoiResponse.stock == 'pass') {
+                $('#stock-response').html('<div class="alert alert-success">Sellout check - ok</div>');
+            }
+            else if(!amazonSoiResponse.stock){
+                $('#stock-response').text('Please fix the error above to perform stock check');
+            }
+            else {
+                $('#stock-response').html('<div class="alert alert-danger">Qty must be number. The following lines are invalid</div>');
+                for (var i in amazonSoiResponse.stock) {
+                    $('#stock-response').append('<div>Line '+ (parseInt(i)+2) + ': ' + amazonSoiResponse.stock[i] +'</div>');
+                }
+                $('#amazon-soi-file').val('');
+            }
+            // BO check
+            if(amazonSoiResponse.bo == 'pass') {
+                $('#bo-response').html('<div class="alert alert-success">Sellout check - ok</div>');
+            }
+            else if(!amazonSoiResponse.bo){
+                $('#bo-response').text('Please fix the error above to perform bo check');
+            }
+            else {
+                $('#bo-response').html('<div class="alert alert-danger">Qty must be number. The following lines are invalid</div>');
+                for (var i in amazonSoiResponse.bo) {
+                    $('#bo-response').append('<div>Line '+ (parseInt(i)+2) + ': ' + amazonSoiResponse.bo[i] +'</div>');
+                }
+                $('#amazon-soi-file').val('');
+            }
+            // ASIN check
+            if(amazonSoiResponse.asin == 'pass') {
+                $('#asin-response').html('<div class="alert alert-success">ASIN check - ok</div>');
+            }
+            else if(!amazonSoiResponse.asin){
+                $('#asin-response').text('Please fix the error above to perform asin check');
+            }
+            else {
+                $('#asin-response').append('<div class="alert alert-danger">The following ASIN are not found in the system. Please modify your submission, or contact james.guo@tp-link.com</div>');
+                for (var i in amazonSoiResponse.asin) {
+                    $('#asin-response').append('<div>'+ amazonSoiResponse.asin[i] +'<div>');
+                }
+                $('#amazon-soi-file').val('');
+            }
+            // Duplication check
+            if(amazonSoiResponse.duplication == 'pass') {
+                $('#duplication-response').html('<div class="alert alert-success">Sellout check - ok</div>');
+            }
+            else if(!amazonSoiResponse.duplication){
+                $('#duplication-response').text('Please fix the error above to perform duplication check');
+            }
+            else {
+                $('#duplication-response').html('<div class="alert alert-danger">Sellout existed for ' + amazonSoiResponse.duplication + '</div>');
+                $('#amazon-soi-file').val('');
+            }
+            if (
+                amazonSoiResponse.date == 'pass' && 
+                amazonSoiResponse.header == 'pass' && 
+                amazonSoiResponse.sellout == 'pass' && 
+                amazonSoiResponse.stock == 'pass' && 
+                amazonSoiResponse.bo == 'pass' && 
+                amazonSoiResponse.asin == 'pass' && 
+                amazonSoiResponse.duplication == 'pass' 
+            ) {
+                $('#submit').show();
+            }
+        } else {
+                $('#upload-status').html('Error in submitting, please retry. If the problem exists, please contact james.guo@tp-link.com');
+        }
+    } // amazonSoiRequest.onreadystatechange
+}); // On change
+</script>
+{% endblock %}

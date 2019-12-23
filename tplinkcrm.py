@@ -2379,31 +2379,61 @@ def uploadCustomer():
             user = user, 
         )
 
-@app.route('/amazon-sellout/upload-check', methods=['POST'])
+@app.route('/amazon-soi/upload-check', methods=['POST'])
 @login_required(['admin', 'uploader'])
-def amazonSelloutUploadCheck():
+def amazonSoiUploadCheck():
     user = getUserById(login_session['id'])
     response = {}
-    amazon_sellout_file = request.files.get('amazon-sellout-file')
-    amazon_sellout_df = pd.read_excel(amazon_sellout_file)
-    # Check whether header in submission is ok
-    header = amazon_sellout_df.columns
-    if header[0] != 'ASIN':
-        response['header'] = {0: 'First column name must be ASIN'}
+    # Check whether date is of right format
+    amazon_soi_date = request.form.get('amazon-soi-date')
+    parsed_date = parsing_date(amazon_soi_date)
+    if not amazon_soi_date:
+        response['date'] = amazon_soi_date
         return simplejson.dumps(response)
-    date_header_raw = header[1:]
-    date_header = pd.to_datetime(date_header_raw, format='%Y-%m-%d', errors='coerce')
-    header_err = date_header_raw[date_header.isna()]
-    if not header_err.empty: 
+    else:
+        response['date'] = 'pass'
+    amazon_soi_file = request.files.get('amazon-soi-file')
+    amazon_soi_df = pd.read_excel(amazon_soi_file)
+    # Check whether header in submission is ok
+    required_header = pd.Series(['ASIN', 'Ordered Units', 'Available Inventory', 'Open Purchase Order Quantity'])
+    header_err = required_header[~required_header.isin(amazon_soi_df.columns)]
+    if not header_err.empty:
         response['header'] = header_err.to_dict()
         return simplejson.dumps(response)
     else:
         response['header'] = 'pass'
-    amazon_sellout_df.rename(columns = {
+    amazon_soi_df.rename(columns = {
             'ASIN': 'asin', 
+            'Ordered Units': 'sellout', 
+            'Available Inventory': 'stock', 
+            'Open Purchase Order Quantity': 'bo', 
         }, inplace = True)
+    # Check whether sellout in submission is ok
+    sellout_col = pd.to_numeric(amazon_soi_df['sellout'], errors='coerce')
+    sellout_err = amazon_soi_df['sellout'][sellout_col.isna()]
+    if not sellout_err.empty: 
+        response['sellout'] = sellout_err.to_dict()
+        return simplejson.dumps(response)
+    else:
+        response['sellout'] = 'pass'
+    # Check whether stock in submission is ok
+    stock_col = pd.to_numeric(amazon_soi_df['stock'], errors='coerce')
+    stock_err = amazon_soi_df['stock'][stock_col.isna()]
+    if not stock_err.empty: 
+        response['stock'] = stock_err.to_dict()
+        return simplejson.dumps(response)
+    else:
+        response['stock'] = 'pass'
+    # Check whether bo in submission is ok
+    bo_col = pd.to_numeric(amazon_soi_df['bo'], errors='coerce')
+    bo_err = amazon_soi_df['bo'][bo_col.isna()]
+    if not bo_err.empty: 
+        response['bo'] = bo_err.to_dict()
+        return simplejson.dumps(response)
+    else:
+        response['bo'] = 'pass'
     # Check whether all ASINs are mapped
-    asins = pd.unique(amazon_sellout_df['asin'])
+    asins = pd.unique(amazon_soi_df['asin'])
     asins = pd.Series(asins)
     unmapped_asins = get_unmapped_sku(asins.apply(lambda x: 'AMAZON-{}'.format(str(x).strip().upper())))
     if not unmapped_asins.empty:
@@ -2411,11 +2441,28 @@ def amazonSelloutUploadCheck():
         return simplejson.dumps(response)
     else: 
         response['asin'] = 'pass'
+    # Check whether there are duplicated sellout
+    amazon = session.query(
+            Account
+        ).filter(
+            Account.name == 'AMAZON {}'.format(user.country)
+        ).first()
+    result = session.query(
+            Sellout
+        ).filter(
+            Sellout.date == parsed_date, 
+            Sellout.account_id == amazon.id, 
+        )
+    if result.count():
+        response['duplication'] = amazon_soi_date
+        return simplejson.dumps(response)
+    else: 
+        response['duplication'] = 'pass'
     return simplejson.dumps(response)
 
-@app.route('/amazon-sellout/upload', methods=['GET', 'POST'])
+@app.route('/amazon-soi/upload', methods=['GET', 'POST'])
 @login_required(['admin', 'uploader'])
-def uploadAmazonSellout():
+def uploadAmazonSoi():
     user = getUserById(login_session['id'])
     if request.method == 'POST':
         amazon = session.query(
@@ -2426,46 +2473,49 @@ def uploadAmazonSellout():
         if not amazon:
             flash('Please set up AMAZON {} as an account first'.format(user.country))
             return redirect('/')
-        amazon_sellout_file = request.files.get('amazon-sellout-file')
-        amazon_sellout_df = pd.read_excel(amazon_sellout_file)
-        amazon_sellout_df.rename(columns = {
+        amazon_soi_date = request.form.get('amazon-soi-date')
+        parsed_date = parsing_date(amazon_soi_date)
+        amazon_soi_file = request.files.get('amazon-soi-file')
+        amazon_soi_df = pd.read_excel(amazon_soi_file)
+        amazon_soi_df.rename(columns = {
                 'ASIN': 'asin', 
+                'Ordered Units': 'sellout', 
+                'Available Inventory': 'stock', 
+                'Open Purchase Order Quantity': 'bo', 
             }, inplace = True)
         # Remove duplicated ASIN
-        amazon_sellout_df.drop_duplicates(subset='asin', inplace=True)
-        amazon_sellout_df.rename(columns=lambda x: pd.to_datetime(x, format='%Y-%m-%d', errors='ignore'), inplace=True)
-        date_header = amazon_sellout_df.columns[1:]
-        # date_header = pd.to_datetime(date_header, format='%Y-%m-%d', errors='coerce')
-        amazon_sellout_df['sku'] = amazon_sellout_df['asin'].apply(lambda x: 'AMAZON-{}'.format(str(x).strip().upper()))
+        amazon_soi_df.drop_duplicates(subset='asin', inplace=True)
+        amazon_soi_df.rename(columns=lambda x: pd.to_datetime(x, format='%Y-%m-%d', errors='ignore'), inplace=True)
+        amazon_soi_df['sku'] = amazon_soi_df['asin'].apply(lambda x: 'AMAZON-{}'.format(str(x).strip().upper()))
         result = session.query(
                 SkuToProduct.sku.label('sku'), 
                 SkuToProduct.product_id.label('product_id')
             )
         result_df = pd.read_sql(result.statement, result.session.bind)
-        amazon_sellout_df = amazon_sellout_df.merge(result_df, on='sku', how='left')
-        for sellout_date in date_header:
-            result = session.query(
-                    Sellout
-                ).filter(
-                    Sellout.account_id == amazon.id, 
-                    Sellout.date == sellout_date, 
-                ).first()
-            if result:
-                continue
-            for index, row in amazon_sellout_df.iterrows():
-                newSellout = Sellout(
-                       date = sellout_date, 
-                       qty = row[sellout_date], 
-                       account_id = amazon.id, 
-                       product_id = row.product_id, 
-                    )
-                session.add(newSellout)
-            session.commit()
+        amazon_soi_df = amazon_soi_df.merge(result_df, on='sku', how='left')
+        # Sellout and Stock
+        for index, row in amazon_soi_df.iterrows():
+            newSellout = Sellout(
+                   date = parsed_date, 
+                   qty = row.sellout, 
+                   account_id = amazon.id, 
+                   product_id = row.product_id, 
+                )
+            newStock = Stock(
+                   date = parsed_date, 
+                   stock = row.stock, 
+                   bo = row.bo, 
+                   account_id = amazon.id, 
+                   product_id = row.product_id, 
+                )
+            session.add(newSellout)
+            session.add(newStock)
+        session.commit()
         flash('Successfully uploaded')
         return redirect('/')
     else:
         return render_template(
-            'amazon_sellout_upload.html', 
+            'amazon_soi_upload.html', 
             login = login_session, 
             user = user, 
         )

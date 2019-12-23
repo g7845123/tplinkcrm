@@ -217,8 +217,6 @@ class Stock(Base):
     date = Column(Date, nullable=False)
     stock = Column(Integer)
     bo = Column(Integer)
-    distri_cost = Column(Integer)
-    country = Column(String(255))
 
     product_id = Column(Integer, ForeignKey('product.id'))
     product = relationship('Product')
