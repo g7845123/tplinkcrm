@@ -180,9 +180,9 @@ def mainPage():
         country = user.country, 
     )
 
-@app.route('/amazon-sellout/dashboard')
+@app.route('/amazon-soi/dashboard')
 @login_required(['DE'])
-def amazonSelloutDashboard():
+def amazonSoiDashboard():
     user = getUserById(login_session['id'])
     result = session.query(
             Account
@@ -194,7 +194,7 @@ def amazonSelloutDashboard():
             Product.sku.label('sku'), 
             Product.id.label('product_id'), 
         )
-    sellout_df = pd.read_sql(result.statement, result.session.bind)
+    soi_df = pd.read_sql(result.statement, result.session.bind)
     result = session.query(
             Sellout.product_id.label('product_id'), 
             Sellout.date.label('date'), 
@@ -213,13 +213,13 @@ def amazonSelloutDashboard():
     result_df = pd.read_sql(result.statement, result.session.bind)
     result_df = result_df.groupby('product_id').sum()
     result_df['qty'] = result_df['qty'] / 90 * 30
-    result_df['qty'] = result_df['qty'].astype(int)
+    result_df['qty'] = result_df['qty'].round()
     result_df.rename(columns = {
             'qty': 'd90', 
         }, inplace = True)
-    sellout_df = sellout_df.merge(result_df, on='product_id', how='left')
-    # remove product without sellout
-    sellout_df = sellout_df[~sellout_df['d90'].isna()]
+    soi_df = soi_df.merge(result_df, on='product_id', how='left')
+    # remove product without soi
+    soi_df = soi_df[~soi_df['d90'].isna()]
     # last 30 day
     first_day = last_day - timedelta(days=30)
     result = result.filter(
@@ -227,11 +227,11 @@ def amazonSelloutDashboard():
         )
     result_df = pd.read_sql(result.statement, result.session.bind)
     result_df = result_df.groupby('product_id').sum()
-    result_df['qty'] = result_df['qty'].astype(int)
+    result_df['qty'] = result_df['qty'].round()
     result_df.rename(columns = {
             'qty': 'd30', 
         }, inplace = True)
-    sellout_df = sellout_df.merge(result_df, on='product_id', how='left')
+    soi_df = soi_df.merge(result_df, on='product_id', how='left')
     # last 7 day
     first_day = last_day - timedelta(days=7)
     result = result.filter(
@@ -244,15 +244,33 @@ def amazonSelloutDashboard():
     result_df.rename(columns = {
             'qty': 'd7', 
         }, inplace = True)
-    sellout_df = sellout_df.merge(result_df, on='product_id', how='left')
-    # Sort by D7-D90 Gap
-    sellout_df['weight'] = abs(sellout_df['d7']-sellout_df['d90'])
-    sellout_df.sort_values(by='weight', ascending=False, inplace=True) 
+    soi_df = soi_df.merge(result_df, on='product_id', how='left')
+    # Sort by D90
+    soi_df.sort_values(by='d90', ascending=False, inplace=True) 
+    # Stock
+    result = session.query(
+            Stock.product_id.label('product_id'), 
+            Stock.date.label('date'), 
+            func.sum(Stock.stock).label('stock'), 
+            func.sum(Stock.bo).label('bo'), 
+        ).filter(
+            Stock.account_id == amazon_id, 
+            Stock.date == last_day, 
+        ).group_by(
+            'product_id', 
+            'date'
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    result_df['stock'] = result_df['stock'].round()
+    result_df['bo'] = result_df['bo'].round()
+    soi_df = soi_df.merge(result_df, on='product_id', how='left')
+    soi_df['woc'] = soi_df['stock'] / soi_df['d30'] * 4
+    soi_df['woc'] = soi_df['woc'].round(2)
     return render_template(
-        'amazon_sellout_dashboard.html', 
+        'amazon_soi_dashboard.html', 
         login = login_session, 
         country = user.country, 
-        sellout_df = sellout_df, 
+        soi_df = soi_df, 
         last_day = last_day, 
     )
 
@@ -2394,6 +2412,7 @@ def amazonSoiUploadCheck():
         response['date'] = 'pass'
     amazon_soi_file = request.files.get('amazon-soi-file')
     amazon_soi_df = pd.read_excel(amazon_soi_file)
+    amazon_soi_df.replace('—', '0', inplace=True)
     # Check whether header in submission is ok
     required_header = pd.Series(['ASIN', 'Ordered Units', 'Available Inventory', 'Open Purchase Order Quantity'])
     header_err = required_header[~required_header.isin(amazon_soi_df.columns)]
@@ -2477,6 +2496,7 @@ def uploadAmazonSoi():
         parsed_date = parsing_date(amazon_soi_date)
         amazon_soi_file = request.files.get('amazon-soi-file')
         amazon_soi_df = pd.read_excel(amazon_soi_file)
+        amazon_soi_df.replace('—', '0', inplace=True)
         amazon_soi_df.rename(columns = {
                 'ASIN': 'asin', 
                 'Ordered Units': 'sellout', 
