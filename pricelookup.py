@@ -58,19 +58,18 @@ price_links = session.query(
 fake_header = Headers(headers=True).generate()
 proxies = None
 for price_link in price_links:
+    price = None
     if price_link.id in links_with_record:
         print('Link already with record, skip. {}'.format(price_link.link))
         continue
-    time.sleep(1)
+    wait = random.uniform(1, 10)
+    time.sleep(wait)
     if try_left <= 0:
         print('Max try count reached, quit program')
         quit()
     account = price_link.account
     link = price_link.link
-    try: 
-        price = query_online_price(country, account, link, fake_header, proxies)
-    except:
-        price = None
+    price = query_online_price(country, account, link, fake_header, proxies)
     if price:
         error_count = 0
         newRow = PriceHistory(
@@ -80,7 +79,11 @@ for price_link in price_links:
         )
         session.add(newRow)
         session.commit()
-    elif error_count < 3:
+        continue
+    if price_link.product.lep and price_link.product.lep!=0:
+        print('Key product {}, add into queue again'.format(price_link.product.sku))
+        price_links.append(price_link)
+    if error_count < 3:
         error_count += 1
         continue
     else:
@@ -88,7 +91,6 @@ for price_link in price_links:
         print('Error detected, use new user agent and new IP')
         error_count += 1
         try_left -= 1
-        price_links.append(price_link)
         fake_header = Headers(headers=True).generate()
         print('New user agent: {}'.format(fake_header))
         with Controller.from_port(port = 9051) as c:
