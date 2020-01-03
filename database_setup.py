@@ -157,6 +157,20 @@ class Product(Base):
     def __repr__(self):
         return self.sku
 
+class AmazonReview(Base):
+    __tablename__ = 'amazon_review'
+ 
+    id = Column(Integer, primary_key=True)
+    amazon_id = Column(String(255))
+    date = Column(Date)
+    star = Column(Integer)
+    title = Column(String(255))
+    content = Column(Text)
+    country = Column(String(255))
+
+    product_id = Column(Integer, ForeignKey('product.id'))
+    product = relationship('Product')
+
 class PriceLink(Base):
     __tablename__ = 'price_link'
  

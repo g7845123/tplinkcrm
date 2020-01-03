@@ -12,7 +12,7 @@ from sqlalchemy.sql import label
 from sqlalchemy import extract
 from sqlalchemy.orm import aliased
 from sqlalchemy import and_, or_
-from database_setup import Base, User, Product, SkuToProduct, Stock, Sellout, Productline, PriceLink, PriceHistory, Task, ResetPwdToken, Account, NameToAccount, Sellin, Role, EmailSubscription, PackingListDetail, AccountNote, AccountContact, AccountPartner
+from database_setup import Base, User, Product, SkuToProduct, Stock, Sellout, Productline, PriceLink, PriceHistory, Task, ResetPwdToken, Account, NameToAccount, Sellin, Role, EmailSubscription, PackingListDetail, AccountNote, AccountContact, AccountPartner, AmazonReview
 
 import requests
 from bs4 import BeautifulSoup
@@ -4877,6 +4877,7 @@ admin.add_view(SellinView(Sellin, session))
 admin.add_view(ProductView(Product, session))
 admin.add_view(StockView(Stock, session))
 admin.add_view(SkuToProductView(SkuToProduct, session))
+admin.add_view(ModelView(AmazonReview, session))
 admin.add_view(PriceLinkView(PriceLink, session))
 admin.add_view(PriceHistoryView(PriceHistory, session))
 admin.add_view(ModelView(Task, session))
