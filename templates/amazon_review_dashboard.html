@@ -1,0 +1,68 @@
+{% extends "template.html" %}
+{% block content %}
+    <h1 class="page-header">
+        AMAZON {{country}} Review Dashboard
+    </h1>
+    <p>Last update: {{last_day}}</p>
+    <p>Please note: Star here is average value of original ratings, which may be different from what's displayed on Amazon as they calculate products' star ratings using a machine-learned model. The machine-learned model takes into account factors such as the age of an evaluation, the assessment of its usefulness by customers and whether the evaluations come from verified purchases.</p>
+    <div class="input-group col-md-12">
+        <input type="text" id="search-sku" class="search-query form-control" onkeyup="searchSku()" placeholder="Search for SKU">
+        <span class="input-group-btn">
+            <button class="btn btn-info" type="button">
+                <span class="glyphicon glyphicon-search"></span>
+            </button>
+        </span>
+    </div>
+    <table class="table table-striped" id="star-table">
+        <thead>
+            <tr>
+                <th>SKU</th>
+                <th>Overall</th>
+                <th>D90 Star</th>
+                <th>D30 Star</th>
+                <th>D7 Star</th>
+                <th>Detail</th>
+                <th>Trend</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for id, data in star_df.iterrows() %}
+            <tr{% if data['d7'] < 3.5 %} class="danger"{% endif %}>
+                <td>{{data['sku']}}</td>
+                <td>{{data['all']}}</td>
+                <td>{{data['d90']}}</td>
+                <td>{{data['d30']}}</td>
+                <td>{{data['d7']}}</td>
+                <td><a href="/amazon-review/detail?product={{data.product_id}}&start={{first_day.strftime('%Y-%m-%d')}}&end={{last_day.strftime('%Y-%m-%d')}}" target="_blank">View Detail</a></td>
+                <td><a href="/amazon-review/trend?product={{data.product_id}}" target="_blank">View Trend</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
+
+
+{% block script %}
+<script>
+function searchSku() {
+    // Declare variables 
+    var input, filter, table, tr, td, i;
+    input = document.getElementById("search-sku");
+    filter = input.value.toUpperCase();
+    table = document.getElementById("star-table");
+    tr = table.getElementsByTagName("tr");
+  
+    // Loop through all table rows, and hide those who don't match the search query
+    for (i = 0; i < tr.length; i++) {
+        td = tr[i].getElementsByTagName("td")[0];
+        if (td) {
+            if (td.innerHTML.toUpperCase().indexOf(filter) > -1) {
+                tr[i].style.display = "";
+            } else {
+                tr[i].style.display = "none";
+            }
+        } 
+    }
+}
+</script>
+{% endblock %}

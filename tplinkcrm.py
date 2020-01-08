@@ -322,6 +322,180 @@ def amazonSelloutDetail():
         d30_sellout_df = d30_sellout_df, 
     )
 
+@app.route('/amazon-review/dashboard')
+@login_required(['DE'])
+def amazonReviewDashboard():
+    user = getUserById(login_session['id'])
+    result = session.query(
+            Product.sku.label('sku'), 
+            Product.id.label('product_id'), 
+        )
+    star_df = pd.read_sql(result.statement, result.session.bind)
+    result = session.query(
+            AmazonReview.product_id.label('product_id'), 
+            AmazonReview.date.label('date'), 
+            AmazonReview.star.label('star'), 
+        ).filter(
+            AmazonReview.country == user.country
+        ).order_by(
+            AmazonReview.date.desc()
+        )
+    last_day = result.first().date
+    # all
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    result_df = result_df.groupby('product_id').mean()
+    result_df['star'] = result_df['star'].round(2)
+    result_df.rename(columns = {
+            'star': 'all', 
+        }, inplace = True)
+    star_df = star_df.merge(result_df, on='product_id', how='left')
+    # remove product without review
+    star_df = star_df[~star_df['all'].isna()]
+    # last 90 day
+    first_day = last_day - timedelta(days=90)
+    result = result.filter(
+            AmazonReview.date > first_day, 
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    result_df = result_df.groupby('product_id').mean()
+    result_df['star'] = result_df['star'].round(2)
+    result_df.rename(columns = {
+            'star': 'd90', 
+        }, inplace = True)
+    star_df = star_df.merge(result_df, on='product_id', how='left')
+    # last 30 day
+    first_day = last_day - timedelta(days=30)
+    result = result.filter(
+            AmazonReview.date > first_day, 
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    result_df = result_df.groupby('product_id').mean()
+    result_df['star'] = result_df['star'].round(2)
+    result_df.rename(columns = {
+            'star': 'd30', 
+        }, inplace = True)
+    star_df = star_df.merge(result_df, on='product_id', how='left')
+    # last 7 day
+    first_day = last_day - timedelta(days=7)
+    result = result.filter(
+            AmazonReview.date > first_day, 
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    result_df = result_df.groupby('product_id').mean()
+    result_df['star'] = result_df['star'].round(2)
+    result_df.rename(columns = {
+            'star': 'd7', 
+        }, inplace = True)
+    star_df = star_df.merge(result_df, on='product_id', how='left')
+    # Sort by D7
+    star_df.sort_values(by='d7', ascending=True, inplace=True) 
+    return render_template(
+        'amazon_review_dashboard.html', 
+        login = login_session, 
+        country = user.country, 
+        star_df = star_df, 
+        first_day = last_day - timedelta(days=365), 
+        last_day = last_day, 
+    )
+
+@app.route('/amazon-review/trend')
+@login_required(['DE'])
+def amazonReviewTrend():
+    user = getUserById(login_session['id'])
+    product_id = request.args.get('product')
+    result = session.query(
+            Product
+        ).filter(
+            Product.id == product_id
+        ).first()
+    sku = result.sku
+    result = session.query(
+            AmazonReview.date.label('date'), 
+            func.avg(AmazonReview.star).label('star'), 
+        ).filter(
+            AmazonReview.product_id == product_id, 
+            AmazonReview.country == user.country, 
+        ).group_by(
+            'date'
+        ).order_by(
+            'date'
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    result_df['date'] = pd.to_datetime(result_df['date'])
+    result_df.set_index('date', inplace=True)
+    row_count = result_df.shape[0]
+    # D7 Star
+    d7_review_df = result_df.resample('7D').mean().round(2)
+    d7_review_df.dropna(subset=['star'], inplace=True)
+    # D30 Star
+    d30_review_df = result_df.resample('30D').mean().round(2)
+    d30_review_df.dropna(subset=['star'], inplace=True)
+    return render_template(
+        'amazon_review_trend.html', 
+        login = login_session, 
+        country = user.country, 
+        sku = sku, 
+        d7_review_df = d7_review_df, 
+        d30_review_df = d30_review_df, 
+    )
+
+@app.route('/amazon-review/detail')
+@login_required(['DE'])
+def amazonReviewDetail():
+    user = getUserById(login_session['id'])
+    review_day_start = request.args.get('start')
+    review_day_start = parsing_date(review_day_start)
+    review_day_end = request.args.get('end')
+    review_day_end = parsing_date(review_day_end)
+    product_id = request.args.get('product')
+    result = session.query(
+            Product
+        ).filter(
+            Product.id == product_id
+        ).first()
+    sku = result.sku
+    result = session.query(
+            AmazonReview.date.label('date'), 
+            AmazonReview.amazon_id.label('amazon_id'), 
+            AmazonReview.title.label('title'), 
+            AmazonReview.content.label('content'), 
+            AmazonReview.star.label('star'), 
+        ).filter(
+            AmazonReview.product_id == product_id, 
+            AmazonReview.country == user.country, 
+            AmazonReview.date >= review_day_start, 
+            AmazonReview.date <= review_day_end, 
+        ).order_by(
+            AmazonReview.date.desc()
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    top_review_df = result_df.head(1000)
+    review_stat_df = pd.pivot_table(
+            top_review_df, 
+            values='amazon_id', 
+            index=['star'], 
+            aggfunc='count', 
+        )
+    review_stat_df.reset_index(inplace=True)
+    review_stat_df.rename(columns = {
+            'amazon_id': 'count', 
+        }, inplace = True)
+    review_stat_df.sort_values(by='star', ascending=False, inplace=True) 
+    total_star = np.sum(review_stat_df['star']*review_stat_df['count'])
+    review_count = top_review_df.shape[0]
+    star_avg = total_star / review_count
+    review_stat_df['percentage'] = review_stat_df['count'] / review_count
+    return render_template(
+        'amazon_review_detail.html', 
+        login = login_session, 
+        country = user.country, 
+        sku = sku, 
+        top_review_df = top_review_df, 
+        review_count = review_count, 
+        star_avg = star_avg, 
+        review_stat_df = review_stat_df, 
+    )
+
 @app.route('/operational/dashboard')
 @login_required(['ES', 'DE'])
 def operationalDashboard():

@@ -1,0 +1,72 @@
+{% extends "template.html" %}
+{% block content %}
+    <h1 class="page-header">
+        Review of {{sku}}
+    </h1>
+    <div>
+    {% for id, data in review_stat_df.iterrows() %}
+    {{'{:.0f}'.format(data['star'])}} star review: {{'{:.0f}'.format(data['count'])}} ({{'{:.2%}'.format(data['percentage'])}})<br>
+    {% endfor %}
+    Total review: {{review_count}}<br>
+    Average review: {{'{:.2f}'.format(star_avg)}}
+    </div>
+    {% if review_count >= 1000 %}
+    <p>Only most recent 1000 records are displayed. To view complete reivew, please visit Amazon website</p>
+    {% endif %}
+    <div class="input-group col-md-12">
+        <input type="text" id="search-star" class="search-query form-control" onkeyup="searchStar()" placeholder="Search for Star">
+        <span class="input-group-btn">
+            <button class="btn btn-info" type="button">
+                <span class="glyphicon glyphicon-search"></span>
+            </button>
+        </span>
+    </div>
+    <table class="table table-striped" id="star-table">
+        <thead>
+            <tr>
+                <th>SKU</th>
+                <th>Date</th>
+                <th>Star</th>
+                <th>Title</th>
+                <th>Content</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for id, data in top_review_df.iterrows() %}
+            <tr{% if data['star'] < 3.5 %} class="danger"{% endif %}>
+                <td>{{sku}}</td>
+                <td>{{data['date']}}</td>
+                <td>{{data['star']}}</td>
+                <td><a href="{{'https://www.amazon.{}/gp/customer-reviews/{}'.format(country, data['amazon_id'])}}" target="_blank">{{data['title']}}</a></td>
+                <td>{{data['content']}}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
+
+
+{% block script %}
+<script>
+function searchStar() {
+    // Declare variables 
+    var input, filter, table, tr, td, i;
+    input = document.getElementById("search-star");
+    filter = input.value.toUpperCase();
+    table = document.getElementById("star-table");
+    tr = table.getElementsByTagName("tr");
+  
+    // Loop through all table rows, and hide those who don't match the search query
+    for (i = 0; i < tr.length; i++) {
+        td = tr[i].getElementsByTagName("td")[2];
+        if (td) {
+            if (td.innerHTML.toUpperCase().indexOf(filter) > -1) {
+                tr[i].style.display = "";
+            } else {
+                tr[i].style.display = "none";
+            }
+        } 
+    }
+}
+</script>
+{% endblock %}

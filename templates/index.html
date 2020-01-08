@@ -13,21 +13,9 @@
     </div>
 -->
 
-    <h2>Amazon category link</h2>
-    {% if country=="ES" %}
-    <a href="https://www.amazon.es/gp/bestsellers/computers/937958031" target="_blank" class="btn btn-primary">Overview</a>
-    <a href="https://www.amazon.es/gp/bestsellers/computers/937973031" target="_blank" class="btn btn-primary">Repeater</a>
-    <a href="https://www.amazon.es/gp/bestsellers/computers/937960031" target="_blank" class="btn btn-primary">Powerline</a>
-    <a href="https://www.amazon.es/gp/bestsellers/computers/937965031" target="_blank" class="btn btn-primary">Switch</a>
-    <a href="https://www.amazon.es/gp/bestsellers/computers/937974031/" target="_blank" class="btn btn-primary">Router</a>
-    {% elif country=="DE" %}
-    <a href="https://www.amazon.de/gp/bestsellers/computers/429870031/" target="_blank" class="btn btn-primary">Overview</a>
-    <a href="https://www.amazon.de/gp/bestsellers/computers/430153031/" target="_blank" class="btn btn-primary">Repeater</a>
-    <a href="https://www.amazon.de/gp/bestsellers/computers/430151031/" target="_blank" class="btn btn-primary">Powerline</a>
-    <a href="https://www.amazon.de/gp/bestsellers/computers/430150031/" target="_blank" class="btn btn-primary">Switch</a>
-    <a href="https://www.amazon.de/gp/bestsellers/computers/430154031/" target="_blank" class="btn btn-primary">Router</a>
-    {% endif %}
-
+    <h2>Amazon Toolkit</h2>
+    <a href="/amazon-soi/dashboard" class="btn btn-primary">Amazon SOI</a>
+    <a href="/amazon-review/dashboard" class="btn btn-primary">Amazon Review</a>
 
     <h2>Price Report</h2>
     <a href="/price/dashboard" class="btn btn-primary">Dashboard</a>
@@ -44,7 +32,6 @@
     <br><br>
 -->
     <h2>Sales Report</h2>
-    <a href="/amazon-soi/dashboard" class="btn btn-primary">Amazon SOI</a><br>
     <label for="account-search">View by Account</label>
     <form class="form-group" id="account-search" method="GET" action="/account/search">
     <div class="input-group col-md-9">
