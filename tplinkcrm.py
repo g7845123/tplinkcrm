@@ -4056,7 +4056,7 @@ def sellinDetail():
     return render_template(
             'sellin_detail.html', 
             login = login_session, 
-            sellin_df = sellin_df, 
+            sellin_df = sellin_df.head(5000), 
         )
 
 @app.route('/account/<int:account_id>', methods=['GET', 'POST'])

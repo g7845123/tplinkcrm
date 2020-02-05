@@ -3,6 +3,9 @@
     <h1 class="page-header">
         Sellin Detail
     </h1>
+    {% if sellin_df.shape[0] >= 5000 %}
+    <p>Only most recent 5000 records are shown. To view full records, please refer to the sellthrough report</p>
+    {% endif %}
     <div class="input-group col-md-12">
         <input type="text" id="search-sku" class="search-query form-control" onkeyup="searchSku()" placeholder="Search for SKU">
         <span class="input-group-btn">
