@@ -2355,7 +2355,6 @@ def stockUploadCheck():
         ).filter(
             Stock.date >= date_start, 
             Stock.date <= date_end, 
-            Stock.country == user.country, 
             Stock.account_id.in_(distri_ids), 
         )
     duplication_df = pd.read_sql(result.statement, result.session.bind)
@@ -2427,10 +2426,8 @@ def uploadStock():
                    date = row['date'], 
                    stock = row['stock'], 
                    bo = row['bo'], 
-                   country = user.country, 
                    product_id = row['product_id'], 
                    account_id = row['distributor_id'], 
-                   distri_cost = row['distri_cost'], 
                 )
             session.add(newStock)
         session.commit()
