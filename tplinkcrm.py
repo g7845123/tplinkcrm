@@ -4353,6 +4353,8 @@ def viewAccount(account_id):
         monthview_df['Total'] = monthview_df.sum(axis=1)
         result = session.query(
                 extract('year', Sellin.date).label('year'), 
+                extract('month', Sellin.date).label('month'), 
+                extract('day', Sellin.date).label('day'), 
                 Product.sku.label('sku'), 
                 Sellin.distri_id.label('distri_id'), 
                 Product.category.label('category'), 
@@ -4366,10 +4368,14 @@ def viewAccount(account_id):
                 extract('month', Sellin.date) >= date_start.month, 
                 extract('month', Sellin.date) <= date_end.month, 
             ).group_by(
-                'year', 'category', 'sub_category', 'sku', 'distri_id', 
+                'year', 'month', 'day', 'category', 'sub_category', 'sku', 'distri_id', 
             )
         result_df = pd.read_sql(result.statement, result.session.bind)
         result_df['year'] = result_df['year'].astype(int)
+        result_df['month'] = result_df['month'].astype(int)
+        result_df['day'] = result_df['day'].astype(int)
+        drop_flag = (result_df['month']==date_end.month) & (result_df['day']>date_end.day)
+        result_df = result_df[~drop_flag]
         overview_df = pd.pivot_table(
                 result_df, 
                 values='revenue', 
