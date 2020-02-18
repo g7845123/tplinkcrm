@@ -257,6 +257,29 @@
     <label class="radio-inline"><input type="radio" name="sellin-sku-optradio" id="sellin-sku-qty">Qty</label>
     <a href="/sellin/detail?account={{account.id}}" class="btn btn-primary" target="_blank">Detail</a>
     <div id="sellin-sku" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
+        {% if sku_table_df.shape[1] >=2 %}
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>SKU</th>
+                    {% for column in sku_table_df.columns %}
+                    <th>{{column}}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for sku, row in sku_table_df.iterrows() %}
+                <tr{% if row.get('YoY') and row.get('YoY') < -0.5 %} class="danger"{% endif %}>
+                    <td>{{sku}}</td>
+                    {% for e in row[:-1] %}
+                    <td>{{e}}</td>
+                    {% endfor %}
+                    <td>{{ '{:.0%}'.format(row[-1]) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
     {% else %}
     <div>No data available</div>
     {% endif %}

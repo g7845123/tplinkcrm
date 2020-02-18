@@ -4421,6 +4421,16 @@ def viewAccount(account_id):
         sku_df['weight'] = sku_df.sum(axis=1)
         sku_df.sort_values(by=['weight'], ascending=False, inplace=True)
         sku_df.drop(columns=['weight'], inplace=True)
+        try:
+            sku_table_df = sku_df['qty']
+        except:
+            sku_table_df = pd.DataFrame()
+        if sku_table_df.shape[1] >= 2:
+            current_year_data = sku_table_df.iloc[:, -1]
+            last_year_data = sku_table_df.iloc[:, -2]
+            sku_table_df['Diff'] = current_year_data - last_year_data
+            sku_table_df['YoY'] = sku_table_df['Diff'] / last_year_data
+            sku_table_df.sort_values(by=['Diff'], ascending=True, inplace=True)
         sku_df = sku_df.head(10)
         distri_df = pd.pivot_table(
                 result_df, 
@@ -4453,6 +4463,7 @@ def viewAccount(account_id):
                 category_df = category_df, 
                 sub_category_df = sub_category_df, 
                 sku_df = sku_df, 
+                sku_table_df = sku_table_df, 
                 distri_df = distri_df, 
                 date_start = date_start, 
                 date_end = date_end, 
