@@ -56,7 +56,13 @@ price_links = session.query(
     ).all()
 
 fake_header = Headers(headers=True).generate()
-proxies = None
+print('User agent: {}'.format(fake_header))
+proxies = {
+    'http': 'socks5://127.0.0.1:9050',
+    'https': 'socks5://127.0.0.1:9050'
+}
+new_ip = requests.get('https://ident.me', proxies=proxies).text
+print('IP: {}'.format(new_ip))
 for price_link in price_links:
     price = None
     if price_link.id in links_with_record:

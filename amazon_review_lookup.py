@@ -17,6 +17,11 @@ import argparse
 
 import re
 
+# The script will be triggered by Cron, add random delay to make it's irregular
+wait = random.uniform(0, 2*60*60)
+time.sleep(wait)
+print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
 # The script will be triggered by Cron, add random delay to make it irregular
 wait = random.uniform(0, 2*60*60)
 time.sleep(wait)
@@ -44,7 +49,13 @@ products = session.query(
 review_url_template = 'https://www.amazon.{}/product-reviews/{}/?formatType=current_format&pageNumber={}&sortBy=recent'
 
 fake_header = Headers(headers=True).generate()
-proxies = None
+print('User agent: {}'.format(fake_header))
+proxies = {
+    'http': 'socks5://127.0.0.1:9050',
+    'https': 'socks5://127.0.0.1:9050'
+}
+new_ip = requests.get('https://ident.me', proxies=proxies).text
+print('IP: {}'.format(new_ip))
 for product in products:
     page_num = 1
     dup_review = 0
