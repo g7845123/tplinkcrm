@@ -3,10 +3,10 @@
     <h1 class="page-header">
         {{sku}} AMAZON {{country}} Review Trend
     </h1>
-    <h2>D7 Review</h2>
-    <div id="d7-review" style="height: 400px"></div>
     <h2>D30 Review</h2>
     <div id="d30-review" style="height: 400px"></div>
+    <h2>Accumulative Review</h2>
+    <div id="accumulative-review" style="height: 400px"></div>
 {% endblock %}
 
 
@@ -15,14 +15,14 @@
 <script src="{{url_for('static', filename='highcharts/highcharts.js')}}"></script>
 
 <script>
-// D7 Review
+// Accumulative Review
 $(function () {
-    Highcharts.chart('d7-review', {
+    Highcharts.chart('accumulative-review', {
         chart: {
             zoomType: 'x', 
         },
         title: {
-            text: '{{sku}} D7 Review'
+            text: '{{sku}} Accumulative Review'
         },
         xAxis: {
             type: 'datetime',
@@ -35,7 +35,6 @@ $(function () {
                 text: 'Star'
             },
             allowDecimals: false,
-            min: 0
         },
         legend: {
             enabled: false
@@ -45,7 +44,7 @@ $(function () {
                 name: 'Star',
                 data: [
                     // Date.UTC() in JS use 0-11 to represent month
-                    {% for idx, row in d7_review_df.iterrows() %}
+                    {% for idx, row in accumulative_review_df.iterrows() %}
                       [Date.UTC({{idx.year}}, {{idx.month-1}}, {{idx.day}}), {{row.star}}],
                     {% endfor %}
                 ]

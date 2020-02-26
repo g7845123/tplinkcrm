@@ -424,19 +424,18 @@ def amazonReviewTrend():
     result_df['date'] = pd.to_datetime(result_df['date'])
     result_df.set_index('date', inplace=True)
     row_count = result_df.shape[0]
-    # D7 Star
-    d7_review_df = result_df.resample('7D').mean().round(2)
-    d7_review_df.dropna(subset=['star'], inplace=True)
     # D30 Star
     d30_review_df = result_df.resample('30D').mean().round(2)
     d30_review_df.dropna(subset=['star'], inplace=True)
+    # Accumulative star average
+    accumulative_review_df = result_df.expanding().mean()
     return render_template(
         'amazon_review_trend.html', 
         login = login_session, 
         country = user.country, 
         sku = sku, 
-        d7_review_df = d7_review_df, 
         d30_review_df = d30_review_df, 
+        accumulative_review_df = accumulative_review_df, 
     )
 
 @app.route('/amazon-review/detail')
