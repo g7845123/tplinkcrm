@@ -22,11 +22,6 @@ wait = random.uniform(0, 2*60*60)
 time.sleep(wait)
 print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
-# The script will be triggered by Cron, add random delay to make it irregular
-wait = random.uniform(0, 2*60*60)
-time.sleep(wait)
-print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-
 try_left = 100
 
 parser = argparse.ArgumentParser()
