@@ -1,0 +1,74 @@
+<html>
+  <head>
+  <style>
+    table {
+        border-collapse: collapse;
+    }
+
+    table, td, th {
+        border: 1px solid black;
+        padding: 3px;
+    }
+    </style>
+  </head>
+  <body>
+    <p>Dear {{user_name}}, </p>
+    <p>Today's review report is available, you can click <a href="http://www.tplinkcrm.com/amazon-review/dashboard">here</a> to view full report</p>
+    <table>
+        <thead>
+            <tr>
+                <th>SKU</th>
+                <th>Overall</th>
+                <th>D90 Star</th>
+                <th>D30 Star</th>
+                <th>D7 Star</th>
+                <th>Detail</th>
+                <th>Trend</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for id, data in star_df.iterrows() %}
+            <tr>
+                <td>{{data['sku']}}</td>
+                <td>{{data['all']}}</td>
+                <td>{{data['d90']}}</td>
+                <td>{{data['d30']}}</td>
+                <td>{{data['d7']}}</td>
+                <td><a href="http://www.tplinkcrm.com/amazon-review/detail?product={{data.product_id}}&start={{first_day.strftime('%Y-%m-%d')}}&end={{last_day.strftime('%Y-%m-%d')}}" target="_blank">View Detail</a></td>
+                <td><a href="http://www.tplinkcrm.com/amazon-review/trend?product={{data.product_id}}" target="_blank">View Trend</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <p>Below are new reviews in detail</p>
+    <table>
+        <thead>
+            <tr>
+                <th>SKU</th>
+                <th>Date</th>
+                <th>Star</th>
+                <th>Title</th>
+                <th>Content</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for idx, data in review_detail_df.iterrows() %}
+            <tr>
+                <td>{{data['sku']}}</td>
+                <td>{{data['date']}}</td>
+                <td>{{data['star']}}</td>
+                <td><a href="{{'https://www.amazon.{}/gp/customer-reviews/{}'.format(country, data['amazon_id'])}}" target="_blank">{{data['title']}}</a></td>
+                <td>{{data['content']}}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <br>
+    This is an automaticly sent email, your reply to noreply@tplinkcrm.com will be ignored
+    <br>
+    <p>
+        Best Regards, <br>
+        Review Monitor Team
+    </p>
+  </body>
+</html>

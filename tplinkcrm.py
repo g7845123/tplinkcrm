@@ -322,10 +322,7 @@ def amazonSelloutDetail():
         d30_sellout_df = d30_sellout_df, 
     )
 
-@app.route('/amazon-review/dashboard')
-@login_required(['DE'])
-def amazonReviewDashboard():
-    user = getUserById(login_session['id'])
+def get_amazon_review_info(country):
     result = session.query(
             Product.sku.label('sku'), 
             Product.id.label('product_id'), 
@@ -336,7 +333,7 @@ def amazonReviewDashboard():
             AmazonReview.date.label('date'), 
             AmazonReview.star.label('star'), 
         ).filter(
-            AmazonReview.country == user.country
+            AmazonReview.country == country
         ).order_by(
             AmazonReview.date.desc()
         )
@@ -389,6 +386,13 @@ def amazonReviewDashboard():
     star_df = star_df.merge(result_df, on='product_id', how='left')
     # Sort by D7
     star_df.sort_values(by='d7', ascending=True, inplace=True) 
+    return star_df, last_day
+
+@app.route('/amazon-review/dashboard')
+@login_required(['DE'])
+def amazonReviewDashboard():
+    user = getUserById(login_session['id'])
+    star_df, last_day = get_amazon_review_info(user.country)
     return render_template(
         'amazon_review_dashboard.html', 
         login = login_session, 
@@ -411,24 +415,22 @@ def amazonReviewTrend():
     sku = result.sku
     result = session.query(
             AmazonReview.date.label('date'), 
-            func.avg(AmazonReview.star).label('star'), 
+            AmazonReview.star.label('star'), 
         ).filter(
             AmazonReview.product_id == product_id, 
             AmazonReview.country == user.country, 
-        ).group_by(
-            'date'
         ).order_by(
             'date'
         )
     result_df = pd.read_sql(result.statement, result.session.bind)
     result_df['date'] = pd.to_datetime(result_df['date'])
-    result_df.set_index('date', inplace=True)
-    row_count = result_df.shape[0]
     # D30 Star
+    result_df.set_index('date', inplace=True)
     d30_review_df = result_df.resample('30D').mean().round(2)
     d30_review_df.dropna(subset=['star'], inplace=True)
     # Accumulative star average
     accumulative_review_df = result_df.expanding().mean()
+    accumulative_review_df = accumulative_review_df.loc[~accumulative_review_df.index.duplicated(keep='last')]
     return render_template(
         'amazon_review_trend.html', 
         login = login_session, 

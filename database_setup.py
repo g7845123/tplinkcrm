@@ -167,6 +167,7 @@ class AmazonReview(Base):
     title = Column(String(255))
     content = Column(Text)
     country = Column(String(255))
+    reported = Column(Boolean)
 
     product_id = Column(Integer, ForeignKey('product.id'))
     product = relationship('Product')

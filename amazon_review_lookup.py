@@ -66,9 +66,12 @@ for product in products:
         time.sleep(wait)
         review_url = review_url_template.format(country, product.asin, page_num)
         response = requests.get(review_url, headers=fake_header, proxies=proxies, timeout=60)
-        print('{} page {}: {}'.format(product.sku, page_num, review_url, response.status_code))
+        print('{} page {}: {} {}'.format(product.sku, page_num, review_url, response.status_code))
         if 'Leider stimmen' in str(response.content):
             print('Page number {} exceeds limit, exit'.format(page_num))
+            break
+        if '0,0 von 5 Sternen' in str(response.content):
+            print('New product without review')
             break
         # Switch comment status of below 2 lines to test page parsing function
         parsed_html = BeautifulSoup(response.content, 'html.parser')
@@ -121,6 +124,7 @@ for product in products:
                     title = review_title, 
                     content = review_body, 
                     country = country, 
+                    reported = False, 
                 )
             session.add(newRow)
             session.commit()
