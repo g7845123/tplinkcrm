@@ -3799,6 +3799,11 @@ def searchAccount():
             NameToAccount.name.ilike('%'+account_name+'%'), 
             NameToAccount.country == user.country, 
         )
+    account_ids2 = session.query(
+            Account.id
+        ).filter(
+            Account.tax == account_name
+        )
     result = session.query(
             Account.id.label('account_id'), 
             Account.name.label('account_name'), 
@@ -3808,7 +3813,10 @@ def searchAccount():
             Account.city.label('account_city'), 
             Account.type.label('account_type'), 
         ).filter(
-            Account.id.in_(account_ids), 
+            or_(
+                Account.id.in_(account_ids), 
+                Account.id.in_(account_ids2), 
+            )
         )
     account_df = pd.read_sql(result.statement, result.session.bind)
     result = session.query(
