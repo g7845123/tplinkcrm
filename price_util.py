@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 import re
 import random
 
-def query_online_price(country, account, link, header, proxies):
+def query_online_price(country, account, link, header, proxies=None):
     price = None
     # DE
     if country == 'DE': 
@@ -26,7 +26,7 @@ def query_online_price(country, account, link, header, proxies):
     return price
 
 if __name__ == "__main__":
-    print(query_online_price('DE', 'AMZ', 'https://www.amazon.de/dp/B00A0VCJPI/'))
-    print(query_online_price('DE', 'AMZ', 'https://www.amazon.de/dp/B00KXULGJQ/'))
-    print(query_online_price('DE', 'AMZ', 'https://www.amazon.de/dp/B00K11UHVA/'))
-    print(query_online_price('DE', 'AMZ', 'https://www.amazon.de/dp/B07FY5X9P6/'))
+    header = {
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36'
+    }
+    query_online_price('DE', 'AMZ', 'https://www.amazon.de/dp/B07FY5X9P6/', header)
