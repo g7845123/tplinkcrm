@@ -36,6 +36,9 @@
             {% endfor %}
         </tbody>
     </table>
+    {% if sellin_df.empty %}
+    <a href="/customerfinder/start">No result found. Try to change your input. </button>
+    {% endif %}
 
 {% endblock %}
 

@@ -3217,7 +3217,14 @@ def customerFinderResult():
             aggfunc=np.sum, 
             fill_value=0
         )
-    sellin_df['weight'] = sellin_df[this_year] + sellin_df[this_year-1]
+    if sellin_df.empty:
+        return render_template(
+                'customer_finder_result.html', 
+                login = login_session, 
+                report_range = report_range, 
+                sellin_df = sellin_df, 
+            )
+    sellin_df['weight'] = sellin_df.sum(axis=0)
     sellin_df.sort_values(by=['weight'], ascending=False, inplace=True)
     sellin_df.drop(columns=['weight'], inplace=True)
     result = session.query(
