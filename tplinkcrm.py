@@ -340,12 +340,17 @@ def get_amazon_review_info(country):
     last_day = result.first().date
     # all
     result_df = pd.read_sql(result.statement, result.session.bind)
-    result_df = result_df.groupby('product_id').mean()
-    result_df['star'] = result_df['star'].round(2)
-    result_df.rename(columns = {
+    mean_df = result_df.groupby('product_id').mean()
+    mean_df['star'] = mean_df['star'].round(2)
+    mean_df.rename(columns = {
             'star': 'all', 
         }, inplace = True)
-    star_df = star_df.merge(result_df, on='product_id', how='left')
+    count_df = result_df.groupby('product_id').count()
+    count_df.rename(columns = {
+            'star': 'allcount', 
+        }, inplace = True)
+    star_df = star_df.merge(mean_df, on='product_id', how='left')
+    star_df = star_df.merge(count_df, on='product_id', how='left')
     # remove product without review
     star_df = star_df[~star_df['all'].isna()]
     # last 90 day
@@ -354,36 +359,51 @@ def get_amazon_review_info(country):
             AmazonReview.date > first_day, 
         )
     result_df = pd.read_sql(result.statement, result.session.bind)
-    result_df = result_df.groupby('product_id').mean()
-    result_df['star'] = result_df['star'].round(2)
-    result_df.rename(columns = {
+    mean_df = result_df.groupby('product_id').mean()
+    mean_df['star'] = mean_df['star'].round(2)
+    mean_df.rename(columns = {
             'star': 'd90', 
         }, inplace = True)
-    star_df = star_df.merge(result_df, on='product_id', how='left')
+    count_df = result_df.groupby('product_id').count()
+    count_df.rename(columns = {
+            'star': 'd90count', 
+        }, inplace = True)
+    star_df = star_df.merge(mean_df, on='product_id', how='left')
+    star_df = star_df.merge(count_df, on='product_id', how='left')
     # last 30 day
     first_day = last_day - timedelta(days=30)
     result = result.filter(
             AmazonReview.date > first_day, 
         )
     result_df = pd.read_sql(result.statement, result.session.bind)
-    result_df = result_df.groupby('product_id').mean()
-    result_df['star'] = result_df['star'].round(2)
-    result_df.rename(columns = {
+    mean_df = result_df.groupby('product_id').mean()
+    mean_df['star'] = mean_df['star'].round(2)
+    mean_df.rename(columns = {
             'star': 'd30', 
         }, inplace = True)
-    star_df = star_df.merge(result_df, on='product_id', how='left')
+    count_df = result_df.groupby('product_id').count()
+    count_df.rename(columns = {
+            'star': 'd30count', 
+        }, inplace = True)
+    star_df = star_df.merge(mean_df, on='product_id', how='left')
+    star_df = star_df.merge(count_df, on='product_id', how='left')
     # last 7 day
     first_day = last_day - timedelta(days=7)
     result = result.filter(
             AmazonReview.date > first_day, 
         )
     result_df = pd.read_sql(result.statement, result.session.bind)
-    result_df = result_df.groupby('product_id').mean()
-    result_df['star'] = result_df['star'].round(2)
-    result_df.rename(columns = {
+    mean_df = result_df.groupby('product_id').mean()
+    mean_df['star'] = mean_df['star'].round(2)
+    mean_df.rename(columns = {
             'star': 'd7', 
         }, inplace = True)
-    star_df = star_df.merge(result_df, on='product_id', how='left')
+    count_df = result_df.groupby('product_id').count()
+    count_df.rename(columns = {
+            'star': 'd7count', 
+        }, inplace = True)
+    star_df = star_df.merge(mean_df, on='product_id', how='left')
+    star_df = star_df.merge(count_df, on='product_id', how='left')
     # Sort by D7
     star_df.sort_values(by='d7', ascending=True, inplace=True) 
     return star_df, last_day

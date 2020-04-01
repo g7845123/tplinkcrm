@@ -29,10 +29,10 @@
             {% for id, data in star_df.iterrows() %}
             <tr{% if data['d7'] < 3.5 %} class="danger"{% endif %}>
                 <td>{{data['sku']}}</td>
-                <td>{{data['all']}}</td>
-                <td>{{data['d90']}}</td>
-                <td>{{data['d30']}}</td>
-                <td>{{data['d7']}}</td>
+                <td>{{data['all']}} ({{'{:.0f}'.format(data['allcount'])}})</td>
+                <td>{{data['d90']}} ({{'{:.0f}'.format(data['d90count'])}})</td>
+                <td>{{data['d30']}} ({{'{:.0f}'.format(data['d30count'])}})</td>
+                <td>{{data['d7']}} ({{'{:.0f}'.format(data['d7count'])}})</td>
                 <td><a href="/amazon-review/detail?product={{data.product_id}}&start={{first_day.strftime('%Y-%m-%d')}}&end={{last_day.strftime('%Y-%m-%d')}}" target="_blank">View Detail</a></td>
                 <td><a href="/amazon-review/trend?product={{data.product_id}}" target="_blank">View Trend</a></td>
             </tr>
