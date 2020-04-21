@@ -1,0 +1,72 @@
+{% extends "template.html" %}
+{% block content %}
+    <h1 class="page-header">
+        Conrad SOI (Sell Out and Inventory) Dashboard
+    </h1>
+    <div class="alert alert-danger" role="alert">
+        <strong>Warning!</strong> Please pay special attention to products in red as WOC (Week of Coverage) is less than 2
+    </div>
+    <p>Last update: {{last_day}}</p>
+    <div class="input-group col-md-12">
+        <input type="text" id="search-sku" class="search-query form-control" onkeyup="searchSku()" placeholder="Search for SKU">
+        <span class="input-group-btn">
+            <button class="btn btn-info" type="button">
+                <span class="glyphicon glyphicon-search"></span>
+            </button>
+        </span>
+    </div>
+    <table class="table table-striped" id="soi-table">
+        <thead>
+            <tr>
+                <th>SKU</th>
+                <th>Stock</th>
+                <th>D91 WOC</th>
+                <th>D182 Forecast</th>
+                <th>D91 Forecast</th>
+                <th>D28 Forecast</th>
+                <th>D7 Forecast</th>
+                <th>Detail</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for id, data in soi_df.iterrows() %}
+            <tr{% if data['d91'] > 30 and data['woc'] < 2 %} class="danger"{% endif %}>
+                <td>{{data['sku']}}</td>
+                <td>{{data['stock']}}</td>
+                <td>{{data['woc']}}</td>
+                <td>{{data['d182']}}</td>
+                <td>{{data['d91']}}</td>
+                <td>{{data['d28']}}</td>
+                <td>{{data['d7']}}</td>
+                <td><a href="/conrad-sellout/detail?product={{data.product_id}}">View Detail</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
+
+
+{% block script %}
+<script>
+function searchSku() {
+    // Declare variables 
+    var input, filter, table, tr, td, i;
+    input = document.getElementById("search-sku");
+    filter = input.value.toUpperCase();
+    table = document.getElementById("soi-table");
+    tr = table.getElementsByTagName("tr");
+  
+    // Loop through all table rows, and hide those who don't match the search query
+    for (i = 0; i < tr.length; i++) {
+        td = tr[i].getElementsByTagName("td")[0];
+        if (td) {
+            if (td.innerHTML.toUpperCase().indexOf(filter) > -1) {
+                tr[i].style.display = "";
+            } else {
+                tr[i].style.display = "none";
+            }
+        } 
+    }
+}
+</script>
+{% endblock %}

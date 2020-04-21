@@ -252,6 +252,31 @@ class Sellout(Base):
     account_id = Column(Integer, ForeignKey('account.id'))
     account = relationship('Account')
 
+class ConradSellout(Base):
+    __tablename__ = 'conrad_sellout'
+
+    id = Column(Integer, primary_key=True)
+    date = Column(Date, nullable=False)
+    qty = Column(Integer)
+    company = Column(String(255))
+    type = Column(String(255))
+    location = Column(String(255))
+
+    product_id = Column(Integer, ForeignKey('product.id'))
+    product = relationship('Product')
+
+class ConradStock(Base):
+    __tablename__ = 'conrad_stock'
+    id = Column(Integer, primary_key=True)
+
+    date = Column(Date, nullable=False)
+    qty = Column(Integer)
+    type = Column(String(255))
+    location = Column(String(255))
+
+    product_id = Column(Integer, ForeignKey('product.id'))
+    product = relationship('Product')
+
 class Sellin(Base):
     __tablename__ = 'sellin'
 

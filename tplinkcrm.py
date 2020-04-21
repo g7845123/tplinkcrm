@@ -12,7 +12,7 @@ from sqlalchemy.sql import label
 from sqlalchemy import extract
 from sqlalchemy.orm import aliased
 from sqlalchemy import and_, or_
-from database_setup import Base, User, Product, SkuToProduct, Stock, Sellout, Productline, PriceLink, PriceHistory, Task, ResetPwdToken, Account, NameToAccount, Sellin, Role, EmailSubscription, PackingListDetail, AccountNote, AccountContact, AccountPartner, AmazonReview
+from database_setup import Base, User, Product, SkuToProduct, Stock, Sellout, Productline, PriceLink, PriceHistory, Task, ResetPwdToken, Account, NameToAccount, Sellin, Role, EmailSubscription, PackingListDetail, AccountNote, AccountContact, AccountPartner, AmazonReview, ConradSellout, ConradStock
 
 import requests
 from bs4 import BeautifulSoup
@@ -272,6 +272,143 @@ def amazonSoiDashboard():
         country = user.country, 
         soi_df = soi_df, 
         last_day = last_day, 
+    )
+
+@app.route('/conrad-soi/dashboard')
+@login_required(['DE'])
+def conradSoiDashboard():
+    result = session.query(
+            Product.sku.label('sku'), 
+            Product.id.label('product_id'), 
+        )
+    soi_df = pd.read_sql(result.statement, result.session.bind)
+    result = session.query(
+            ConradSellout.product_id.label('product_id'), 
+            ConradSellout.date.label('date'), 
+            ConradSellout.qty.label('qty'), 
+        ).order_by(
+            ConradSellout.date.desc()
+        )
+    last_day = result.first().date
+    # last 182 day
+    first_day = last_day - timedelta(days=182)
+    result = result.filter(
+            ConradSellout.date > first_day, 
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    result_df = result_df.groupby('product_id').sum()
+    result_df['qty'] = result_df['qty'] / 182 * 30
+    result_df['qty'] = result_df['qty'].round()
+    result_df.rename(columns = {
+            'qty': 'd182', 
+        }, inplace = True)
+    soi_df = soi_df.merge(result_df, on='product_id', how='left')
+    # remove product without soi
+    soi_df = soi_df[~soi_df['d182'].isna()]
+    # last 91 day
+    first_day = last_day - timedelta(days=91)
+    result = result.filter(
+            ConradSellout.date > first_day, 
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    result_df = result_df.groupby('product_id').sum()
+    result_df['qty'] = result_df['qty'].round()
+    result_df['qty'] = result_df['qty'] / 91 * 30
+    result_df['qty'] = result_df['qty'].round()
+    result_df.rename(columns = {
+            'qty': 'd91', 
+        }, inplace = True)
+    soi_df = soi_df.merge(result_df, on='product_id', how='left')
+    # last 28 day
+    first_day = last_day - timedelta(days=28)
+    result = result.filter(
+            ConradSellout.date > first_day, 
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    result_df = result_df.groupby('product_id').sum()
+    result_df['qty'] = result_df['qty'] / 28 * 30
+    result_df['qty'] = result_df['qty'].round()
+    result_df.rename(columns = {
+            'qty': 'd28', 
+        }, inplace = True)
+    soi_df = soi_df.merge(result_df, on='product_id', how='left')
+    # last 7 day
+    first_day = last_day - timedelta(days=7)
+    result = result.filter(
+            ConradSellout.date > first_day, 
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    result_df = result_df.groupby('product_id').sum()
+    result_df['qty'] = result_df['qty'] / 7 * 30
+    result_df['qty'] = result_df['qty'].astype(int)
+    result_df.rename(columns = {
+            'qty': 'd7', 
+        }, inplace = True)
+    soi_df = soi_df.merge(result_df, on='product_id', how='left')
+    # Sort by D182
+    soi_df.sort_values(by='d182', ascending=False, inplace=True) 
+    # Stock
+    result = session.query(
+            ConradStock.product_id.label('product_id'), 
+            ConradStock.date.label('date'), 
+            func.sum(ConradStock.qty).label('stock'), 
+        ).filter(
+            ConradStock.type == 'ZENTRALLAGER', 
+            ConradStock.date == last_day, 
+        ).group_by(
+            'product_id', 
+            'date'
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    result_df['stock'] = result_df['stock'].round()
+    soi_df = soi_df.merge(result_df, on='product_id', how='left')
+    soi_df['woc'] = soi_df['stock'] / soi_df['d91'] * 4
+    soi_df['woc'] = soi_df['woc'].round(2)
+    return render_template(
+        'conrad_soi_dashboard.html', 
+        login = login_session, 
+        soi_df = soi_df, 
+        last_day = last_day, 
+    )
+
+@app.route('/conrad-sellout/detail')
+@login_required(['DE'])
+def conradSelloutDetail():
+    result = session.query(
+            Product
+        ).filter(
+            Product.id == product_id
+        ).first()
+    sku = result.sku
+    result = session.query(
+            Sellout.date.label('date'), 
+            func.sum(Sellout.qty).label('qty'), 
+        ).filter(
+            Sellout.product_id == product_id, 
+            Sellout.account_id == conrad_id, 
+        ).group_by(
+            'date'
+        ).order_by(
+            'date'
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    result_df['date'] = pd.to_datetime(result_df['date'])
+    result_df.set_index('date', inplace=True)
+    # D1 Sellout
+    d1_sellout_df = result_df
+    row_count = result_df.shape[0]
+    # D7 Sellout
+    d7_sellout_df = result_df[row_count%7:].resample('7D').sum()
+    # D30 Sellout
+    d30_sellout_df = result_df[row_count%30:].resample('30D').sum()
+    return render_template(
+        'conrad_sellout_detail.html', 
+        login = login_session, 
+        country = user.country, 
+        sku = sku, 
+        d1_sellout_df = d1_sellout_df, 
+        d7_sellout_df = d7_sellout_df, 
+        d30_sellout_df = d30_sellout_df, 
     )
 
 @app.route('/amazon-sellout/detail')
@@ -2734,6 +2871,165 @@ def uploadAmazonSoi():
             user = user, 
         )
 
+@app.route('/conrad-soi/upload-check', methods=['POST'])
+@login_required(['admin', 'uploader'])
+def conradSoiUploadCheck():
+    response = {}
+    conrad_soi_file = request.files.get('conrad-soi-file')
+    try:
+        conrad_sellout_df = pd.read_excel(conrad_soi_file, sheet_name='sellout')
+        conrad_stock_df = pd.read_excel(conrad_soi_file, sheet_name='stock')
+        response['sheetName'] = 'pass'
+    except:
+        response['sheetName'] = 'error'
+        return simplejson.dumps(response)
+    # Check whether header in sellout submission is ok
+    required_header = pd.Series(['Date', 'SKU', 'Sellout', 'Company', 'Type', 'Location'])
+    header_err = required_header[~required_header.isin(conrad_sellout_df.columns)]
+    if not header_err.empty:
+        response['selloutHeader'] = header_err.to_dict()
+        return simplejson.dumps(response)
+    else:
+        response['selloutHeader'] = 'pass'
+    # Check whether header in stock submission is ok
+    required_header = pd.Series(['Date', 'SKU', 'Stock', 'Type', 'Location'])
+    header_err = required_header[~required_header.isin(conrad_stock_df.columns)]
+    if not header_err.empty:
+        response['stockHeader'] = header_err.to_dict()
+        return simplejson.dumps(response)
+    else:
+        response['stockHeader'] = 'pass'
+    conrad_sellout_df.rename(columns=str.lower, inplace = True)
+    conrad_stock_df.rename(columns=str.lower, inplace = True)
+    # Check whether date in submission is ok
+    sellout_date_col = pd.to_datetime(conrad_sellout_df['date'], format='%Y-%m-%d', errors='coerce')
+    date_err = conrad_sellout_df['date'][sellout_date_col.isna()]
+    if not date_err.empty: 
+        response['selloutDate'] = date_err.to_dict()
+        return simplejson.dumps(response)
+    else:
+        response['selloutDate'] = 'pass'
+    stock_date_col = pd.to_datetime(conrad_stock_df['date'], format='%Y-%m-%d', errors='coerce')
+    date_err = conrad_stock_df['date'][stock_date_col.isna()]
+    if not date_err.empty: 
+        response['stockDate'] = date_err.to_dict()
+        return simplejson.dumps(response)
+    else:
+        response['stockDate'] = 'pass'
+    # Check whether sellout in submission is ok
+    sellout_col = pd.to_numeric(conrad_sellout_df['sellout'], errors='coerce')
+    sellout_err = conrad_sellout_df['sellout'][sellout_col.isna()]
+    if not sellout_err.empty: 
+        response['sellout'] = sellout_err.to_dict()
+        return simplejson.dumps(response)
+    else:
+        response['sellout'] = 'pass'
+    # Check whether stock in submission is ok
+    stock_col = pd.to_numeric(conrad_stock_df['stock'], errors='coerce')
+    stock_err = conrad_stock_df['stock'][stock_col.isna()]
+    if not stock_err.empty: 
+        response['stock'] = stock_err.to_dict()
+        return simplejson.dumps(response)
+    else:
+        response['stock'] = 'pass'
+    # Check whether all SKU are mapped
+    skus = pd.unique(conrad_sellout_df['sku'].append(conrad_stock_df['sku']))
+    skus = pd.Series(skus)
+    unmapped_skus = get_unmapped_sku(skus.apply(lambda x: x.strip().upper()))
+    if not unmapped_skus.empty:
+        response['sku'] = unmapped_skus.to_dict()
+        return simplejson.dumps(response)
+    else: 
+        response['sku'] = 'pass'
+    # Check whether there are duplicated record in sellout
+    sellout_date_col.sort_values(inplace=True) 
+    date_start = sellout_date_col.iloc[0]
+    date_end = sellout_date_col.iloc[-1]
+    result = session.query(
+            ConradSellout, 
+        ).filter(
+            ConradSellout.date >= date_start, 
+            ConradSellout.date <= date_end, 
+        )
+    if result.count():
+        response['selloutDuplication'] = 'error'
+        return simplejson.dumps(response)
+    else: 
+        response['selloutDuplication'] = 'pass'
+    # Check whether there are duplicated record in stock
+    stock_date_col.sort_values(inplace=True) 
+    date_start = stock_date_col.iloc[0]
+    date_end = stock_date_col.iloc[-1]
+    result = session.query(
+            ConradStock, 
+        ).filter(
+            ConradStock.date >= date_start, 
+            ConradStock.date <= date_end, 
+        )
+    if result.count():
+        response['stockDuplication'] = 'error'
+        return simplejson.dumps(response)
+    else: 
+        response['stockDuplication'] = 'pass'
+    return simplejson.dumps(response)
+
+@app.route('/conrad-soi/upload', methods=['GET', 'POST'])
+@login_required(['admin', 'uploader'])
+def uploadConradSoi():
+    user = getUserById(login_session['id'])
+    if request.method == 'POST':
+        conrad_soi_file = request.files.get('conrad-soi-file')
+        result = session.query(
+                SkuToProduct.sku.label('sku'), 
+                SkuToProduct.product_id.label('product_id')
+            )
+        sku_map_df = pd.read_sql(result.statement, result.session.bind)
+        # Sellout
+        conrad_sellout_df = pd.read_excel(conrad_soi_file, sheet_name='sellout')
+        conrad_sellout_df.rename(columns=str.lower, inplace = True)
+        conrad_sellout_df['date'] = pd.to_datetime(conrad_sellout_df['date'], format='%Y-%m-%d')
+        conrad_sellout_df['sku'] = conrad_sellout_df['sku'].apply(lambda x: str(x).strip().upper()) 
+        conrad_sellout_df['company'] = conrad_sellout_df['company'].apply(lambda x: str(x).strip().upper())
+        conrad_sellout_df['type'] = conrad_sellout_df['type'].apply(lambda x: str(x).strip().upper())
+        conrad_sellout_df['location'] = conrad_sellout_df['location'].apply(lambda x: str(x).strip().upper())
+        conrad_sellout_df = conrad_sellout_df.merge(sku_map_df, on='sku', how='left')
+        for index, row in conrad_sellout_df.iterrows():
+            newConradSellout = ConradSellout(
+                   date = row.date, 
+                   product_id = row.product_id, 
+                   qty = row.sellout, 
+                   company = row.company, 
+                   type = row.type, 
+                   location = row.location, 
+                )
+            session.add(newConradSellout)
+        # Stock
+        conrad_stock_df = pd.read_excel(conrad_soi_file, sheet_name='stock')
+        conrad_stock_df.rename(columns=str.lower, inplace = True)
+        conrad_stock_df['date'] = pd.to_datetime(conrad_stock_df['date'], format='%Y-%m-%d')
+        conrad_stock_df['sku'] = conrad_stock_df['sku'].apply(lambda x: str(x).strip().upper()) 
+        conrad_stock_df['type'] = conrad_stock_df['type'].apply(lambda x: str(x).strip().upper())
+        conrad_stock_df['location'] = conrad_stock_df['location'].apply(lambda x: str(x).strip().upper())
+        conrad_stock_df = conrad_stock_df.merge(sku_map_df, on='sku', how='left')
+        for index, row in conrad_stock_df.iterrows():
+            newConradStock = ConradStock(
+                   date = row.date, 
+                   product_id = row.product_id, 
+                   qty = row.stock, 
+                   type = row.type, 
+                   location = row.location, 
+                )
+            session.add(newConradStock)
+        session.commit()
+        flash('Successfully uploaded')
+        return redirect('/')
+    else:
+        return render_template(
+            'conrad_soi_upload.html', 
+            login = login_session, 
+            user = user, 
+        )
+
 @app.route('/sellin/upload-check', methods=['POST'])
 @login_required(['admin', 'uploader'])
 def sellinUploadCheck():
@@ -5117,6 +5413,8 @@ admin.add_view(PackingListView(PackingListDetail, session))
 admin.add_view(AccountNoteView(AccountNote, session))
 admin.add_view(ModelView(AccountContact, session))
 admin.add_view(ModelView(AccountPartner, session))
+admin.add_view(ModelView(ConradSellout, session))
+admin.add_view(ModelView(ConradStock, session))
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=80)
