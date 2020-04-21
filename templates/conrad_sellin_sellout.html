@@ -1,0 +1,68 @@
+{% extends "template.html" %}
+{% block head %}
+<link href="{{url_for('static', filename='datepicker/css/bootstrap-datepicker3.min.css')}}" rel="stylesheet" />
+{% endblock %}
+
+{% block content %}
+    <h2>Grey Market Analysis - Parameter Input</h2>
+    <div class='row'>
+        <form class="col-md-9" method="GET" action="/conrad-sellin-sellout">
+            <label for="report-range">Date range</label>
+            <div class="input-daterange input-group" id="report-range">
+                <span class="input-group-addon">From</span>
+                <input type="text" class="input-sm form-control" id="start" name="start" value="{{report_day_start.strftime("%Y-%m-%d")}}" />
+                <span class="input-group-addon">to</span>
+                <input type="text" class="input-sm form-control" id="end" name="end" value="{{report_day_end.strftime("%Y-%m-%d")}}" />
+            </div>
+            <button type="submit" class="btn btn-primary">Submit</button>
+        </form>
+    </div>
+    {% if sellin_sellout_df is defined %}
+    <h2>Grey Market Analysis - Result</h2>
+    <table class="table table-striped" id="soi-table">
+        <thead>
+            <tr>
+                <th>SKU</th>
+                <th>Initial Stock</th>
+                <th>Sellin</th>
+                <th>Sellout</th>
+                <th>End Stock</th>
+                <th>Diff</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for id, data in sellin_sellout_df.iterrows() %}
+            <tr>
+                <td>{{data['sku']}}</td>
+                <td>{{data['stock_start']}}</td>
+                <td>{{data['sellin']}}</td>
+                <td>{{data['sellout']}}</td>
+                <td>{{data['stock_end']}}</td>
+                <td>{{data['diff']}}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+{% endblock %}
+
+{% block script %}
+
+<!-- Date-Picker Plugin -->
+<script src="{{url_for('static', filename='datepicker/js/bootstrap-datepicker.min.js')}}"></script>
+
+<script>
+$(document).ready(function() {
+    $('#start').datepicker({
+        format: "yyyy-mm-dd", 
+        autoclose: true, 
+        daysOfWeekDisabled: "023456", 
+    });
+    $('#end').datepicker({
+        format: "yyyy-mm-dd", 
+        autoclose: true, 
+        daysOfWeekDisabled: "023456", 
+    });
+});
+</script>
+{% endblock %}

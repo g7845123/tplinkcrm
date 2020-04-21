@@ -411,6 +411,94 @@ def conradSelloutDetail():
         d30_sellout_df = d30_sellout_df, 
     )
 
+@app.route('/conrad-sellin-sellout')
+@login_required(['DE'])
+def conradSellinSellout():
+    report_day_start = request.args.get('start')
+    report_day_end = request.args.get('end')
+    report_day_start = parsing_date(report_day_start)
+    report_day_end = parsing_date(report_day_end)
+    if not (report_day_start and report_day_end): 
+        result = session.query(
+                ConradSellout
+            ).order_by(
+                ConradSellout.date.desc()
+            ).first()
+        report_day_end = result.date
+        report_day_start = report_day_end - timedelta(days=28)
+        return render_template(
+            'conrad_sellin_sellout.html', 
+            login = login_session, 
+            report_day_start = report_day_start, 
+            report_day_end = report_day_end, 
+        )
+    result = session.query(
+            ConradSellout.product_id.label('product_id'), 
+            func.sum(ConradSellout.qty).label('sellout'), 
+        ).filter(
+            ConradSellout.date > report_day_start, 
+            ConradSellout.date <= report_day_end, 
+        ).group_by(
+            'product_id'
+        )
+    sellin_sellout_df = pd.read_sql(result.statement, result.session.bind)
+    result = session.query(
+            Product.id.label('product_id'), 
+            Product.sku.label('sku')
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    sellin_sellout_df = sellin_sellout_df.merge(result_df, on='product_id', how='left')
+    conrad = session.query(
+            Account
+        ).filter(
+            Account.name == 'CONRAD ELECTRONIC SE', 
+        ).first()
+    result = session.query(
+            Sellin.product_id.label('product_id'), 
+            func.sum(Sellin.qty).label('sellin'), 
+        ).filter(
+            Sellin.account_id == conrad.id, 
+            Sellin.date > report_day_start, 
+            Sellin.date <= report_day_end, 
+        ).group_by(
+            Sellin.product_id
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    sellin_sellout_df = sellin_sellout_df.merge(result_df, on='product_id', how='left')
+    result = session.query(
+            ConradStock.product_id.label('product_id'), 
+            func.sum(ConradStock.qty).label('stock_start'),
+        ).filter(
+            ConradStock.date == report_day_start, 
+        ).group_by(
+            'product_id'
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    sellin_sellout_df = sellin_sellout_df.merge(result_df, on='product_id', how='left')
+    result = session.query(
+            ConradStock.product_id.label('product_id'), 
+            func.sum(ConradStock.qty).label('stock_end'),
+        ).filter(
+            ConradStock.date == report_day_end, 
+        ).group_by(
+            'product_id'
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    sellin_sellout_df = sellin_sellout_df.merge(result_df, on='product_id', how='left')
+    sellin_sellout_df.fillna(0, inplace=True)
+    sellin_sellout_df['diff'] = sellin_sellout_df['stock_end'] + sellin_sellout_df['sellout'] - sellin_sellout_df['sellin'] - sellin_sellout_df['stock_start']
+    sellin_sellout_df.sort_values(by='diff', ascending=False, inplace=True) 
+    return render_template(
+        'conrad_sellin_sellout.html', 
+        login = login_session, 
+        report_day_start = report_day_start, 
+        report_day_end = report_day_end, 
+        sellin_sellout_df = sellin_sellout_df, 
+    )
+
+
+            
+
 @app.route('/amazon-sellout/detail')
 @login_required(['DE'])
 def amazonSelloutDetail():
@@ -5390,6 +5478,12 @@ class AccountNoteView(ModelView):
 class PackingListView(ModelView):
     column_filters = ['so', 'ready_date', 'shipped_date', 'invoice_date']
 
+class ConradSelloutView(ModelView):
+    column_filters = ['date', 'product']
+    
+class ConradStockView(ModelView):
+    column_filters = ['date', 'product']
+
 app.secret_key = SECRET_KEY
 app.debug = True
 admin = Admin(app, name='tplink')
@@ -5413,8 +5507,8 @@ admin.add_view(PackingListView(PackingListDetail, session))
 admin.add_view(AccountNoteView(AccountNote, session))
 admin.add_view(ModelView(AccountContact, session))
 admin.add_view(ModelView(AccountPartner, session))
-admin.add_view(ModelView(ConradSellout, session))
-admin.add_view(ModelView(ConradStock, session))
+admin.add_view(ConradSelloutView(ConradSellout, session))
+admin.add_view(ConradStockView(ConradStock, session))
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=80)
