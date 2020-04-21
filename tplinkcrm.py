@@ -4922,6 +4922,11 @@ def viewManager(manager_id):
         ).limit(1)
     recent_date = result.first().date
     report_day_start = date(recent_date.year, 1, 1)
+    last_day = monthrange(recent_date.year, recent_date.month)[1]
+    month_end_date = date(recent_date.year, recent_date.month, last_day)
+    actual_days = (recent_date - report_day_start).days
+    full_days = (month_end_date - report_day_start).days
+    coeffecient = full_days / actual_days
     report_range = (report_day_start, recent_date)
     result = session.query(
             func.extract('year', Sellin.date).distinct().label('year'), 
@@ -4932,16 +4937,17 @@ def viewManager(manager_id):
     revenue_sum_df = pd.DataFrame()
     for account in accounts:
         result = session.query(
-                extract('year', Sellin.date).label('year'), 
-                extract('month', Sellin.date).label('month'), 
+                Sellin.date.label('date'), 
                 func.sum(Sellin.unit_price * Sellin.qty).label('total'), 
             ).filter(
                 Sellin.account_id == account.id, 
                 Sellin.country == user.country, 
             ).group_by(
-                'year', 'month'
+                Sellin.date
             )
         result_df = pd.read_sql(result.statement, result.session.bind)
+        result_df['year'] = pd.DatetimeIndex(result_df['date']).year
+        result_df['month'] = pd.DatetimeIndex(result_df['date']).month
         sellin_df = pd.pivot_table(
                 result_df, 
                 values='total', 
@@ -4970,6 +4976,7 @@ def viewManager(manager_id):
         sellin_dict = sellin_dict, 
         revenue_dict = revenue_dict, 
         report_range = report_range, 
+        coeffecient = coeffecient, 
     )
 
 @app.route('/distri-cost/upload', methods=['GET', 'POST'])
