@@ -1505,6 +1505,37 @@ def productDownload():
     writer.save()
     return send_file('/var/www/tplinkcrm/report/products.xlsx')
 
+@app.route('/revenue/download')
+@login_required(['admin'])
+def revenueDownload():
+    result = session.query(
+            Sellin.account_id.label('account_id'), 
+            func.extract('year', Sellin.date).label('year'), 
+            func.sum(Sellin.qty*Sellin.unit_price/100.).label('revenue'), 
+        ).group_by(
+            'account_id', 'year'
+        )
+    sellin_df = pd.read_sql(result.statement, result.session.bind)
+    sellin_df = pd.pivot_table(
+            sellin_df, 
+            values='revenue', 
+            columns=['year'], 
+            index=['account_id'], 
+            aggfunc=np.sum, 
+            fill_value=0
+        )
+    result = session.query(
+            Account.id.label('account_id'), 
+            Account.name.label('account_name'), 
+            Account.type.label('account_type'), 
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    sellin_df = sellin_df.merge(result_df, on='account_id', how='left')
+    writer = pd.ExcelWriter('/var/www/tplinkcrm/report/revenue.xlsx', engine='xlsxwriter')
+    sellin_df.to_excel(writer, index=False)
+    writer.save()
+    return send_file('/var/www/tplinkcrm/report/revenue.xlsx')
+
 @app.route('/account/download')
 @login_required(['ES', 'DE'])
 def accountDownload():
