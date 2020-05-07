@@ -371,6 +371,70 @@ def conradSoiDashboard():
         last_day = last_day, 
     )
 
+@app.route('/conrad-soi/store')
+@login_required(['DE'])
+def conradSoiStore():
+    report_day_start = request.args.get('start')
+    report_day_end = request.args.get('end')
+    report_day_start = parsing_date(report_day_start)
+    report_day_end = parsing_date(report_day_end)
+    store = request.args.get('store')
+    if not (report_day_start and report_day_end): 
+        result = session.query(
+                ConradSellout
+            ).order_by(
+                ConradSellout.date.desc()
+            ).first()
+        report_day_end = result.date
+        report_day_start = report_day_end - timedelta(days=28)
+        return render_template(
+            'conrad_soi_store.html', 
+            login = login_session, 
+            report_day_start = report_day_start, 
+            report_day_end = report_day_end, 
+        )
+    result = session.query(
+            ConradSellout.product_id.label('product_id'), 
+            func.sum(ConradSellout.qty).label('sellout'), 
+        ).filter(
+            ConradSellout.date > report_day_start, 
+            ConradSellout.date <= report_day_end, 
+            ConradSellout.company == 'DEUTSCHLAND', 
+            ConradSellout.type == 'FILIALEN', 
+        ).group_by(
+            'product_id'
+        )
+    soi_df = pd.read_sql(result.statement, result.session.bind)
+    result = session.query(
+            Product.id.label('product_id'), 
+            Product.sku.label('sku')
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    soi_df = soi_df.merge(result_df, on='product_id', how='left')
+    result = session.query(
+            ConradStock.product_id.label('product_id'), 
+            func.sum(ConradStock.qty).label('stock'),
+        ).filter(
+            ConradStock.date == report_day_end, 
+            ConradStock.type == 'FILIALEN DEUTSCHLAND', 
+        ).group_by(
+            'product_id'
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    soi_df = soi_df.merge(result_df, on='product_id', how='left')
+    soi_df.fillna(0, inplace=True)
+    days = (report_day_end - report_day_start).days
+    soi_df['woc'] = soi_df['stock'] / soi_df['sellout'] * days / 7
+    soi_df['woc'] = soi_df['woc'].round(2)
+    soi_df.sort_values(by='sellout', ascending=False, inplace=True) 
+    return render_template(
+        'conrad_soi_store.html', 
+        login = login_session, 
+        report_day_start = report_day_start, 
+        report_day_end = report_day_end, 
+        soi_df = soi_df, 
+    )
+
 @app.route('/conrad-sellout/detail')
 @login_required(['DE'])
 def conradSelloutDetail():
