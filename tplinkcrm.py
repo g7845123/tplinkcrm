@@ -4592,6 +4592,13 @@ def viewAccount(account_id):
             AccountPartner.account_id == account_id
         )
     account_partner_db = [e.partner for e in account_partner_query]
+    competitor_partner_db = []
+    tp_partner_db = ''
+    for e in account_partner_db:
+        if 'TP-Link' in e:
+            tp_partner_db = e[8:]
+        else:
+            competitor_partner_db.append(e)
     if request.method == 'POST':
         submission_type = request.form.get('submit')
         if submission_type == "new-note":
@@ -4694,7 +4701,10 @@ def viewAccount(account_id):
             account_city = request.form.get('account-city')
             account_pam = request.form.get('account-pam')
             account_stage = request.form.get('account-stage')
-            account_partners = request.form.getlist('account-partners')
+            account_partners = request.form.getlist('competitor-partners')
+            tp_partner = request.form.get('tp-partner')
+            if tp_partner:
+                account_partners.append(tp_partner)
             account_store = request.form.get('account-store')
             account_store = bool(account_store)
             if account_tax:
@@ -4717,28 +4727,33 @@ def viewAccount(account_id):
             if account_stage:
                 account.stage = account_stage.upper()
             account.store = account_store
-            if account_partners:
-                if set(account_partner_db) != set(account_partners):
-                    account_partner_query.delete()
-                    for account_partner in account_partners:
-                        newAccountPartner = AccountPartner(
-                                partner = account_partner, 
-                                account_id = account_id
-                            )
-                        session.add(newAccountPartner)
-                    session.commit()
-                    account_partner_query = session.query(
-                            AccountPartner
-                        ).filter(
-                            AccountPartner.account_id == account_id
+            if set(account_partner_db) != set(account_partners):
+                account_partner_query.delete()
+                for account_partner in account_partners:
+                    newAccountPartner = AccountPartner(
+                            partner = account_partner, 
+                            account_id = account_id
                         )
-                    account_partner_db = [e.partner for e in account_partner_query]
-                    flash('Partner status updated')
-                else: 
-                    flash('Partner status unchanged')
+                    session.add(newAccountPartner)
+                session.commit()
+                account_partner_query = session.query(
+                        AccountPartner
+                    ).filter(
+                        AccountPartner.account_id == account_id
+                    )
+                account_partner_db = [e.partner for e in account_partner_query]
+                flash('Partner status updated')
+            else: 
+                flash('Partner status unchanged')
             session.add(account)
             session.commit()
             flash('Changes saved')
+        return redirect( url_for(
+                    'viewAccount', 
+                    account_id = account_id, 
+                    start = request.args.get('start'),
+                    end = request.args.get('end')
+                ))
     result = session.query(
             AccountNote.id, 
             AccountNote.created, 
@@ -4988,8 +5003,10 @@ def viewAccount(account_id):
                 user = user, 
                 ytd_revenue = ytd_revenue, 
                 past_365_days_revenue = past_365_days_revenue, 
-                account_partner_all = ACCOUNT_PARTNER_ALL, 
-                account_partner_db = account_partner_db, 
+                competitor_partner_all = COMPETITOR_PARTNER_ALL, 
+                tp_partner_all = TP_PARTNER_ALL, 
+                tp_partner_db = tp_partner_db, 
+                competitor_partner_db = competitor_partner_db, 
                 INTERACTION_TYPE_ALL = INTERACTION_TYPE_ALL, 
             )
 
@@ -5580,6 +5597,9 @@ class AccountNoteView(ModelView):
 class PackingListView(ModelView):
     column_filters = ['so', 'ready_date', 'shipped_date', 'invoice_date']
 
+class AccountPartnerView(ModelView):
+    column_filters = ['account', 'partner']
+
 class ConradSelloutView(ModelView):
     column_filters = ['date', 'product']
     
@@ -5608,7 +5628,7 @@ admin.add_view(ModelView(EmailSubscription, session))
 admin.add_view(PackingListView(PackingListDetail, session))
 admin.add_view(AccountNoteView(AccountNote, session))
 admin.add_view(ModelView(AccountContact, session))
-admin.add_view(ModelView(AccountPartner, session))
+admin.add_view(AccountPartnerView(AccountPartner, session))
 admin.add_view(ConradSelloutView(ConradSellout, session))
 admin.add_view(ConradStockView(ConradStock, session))
 

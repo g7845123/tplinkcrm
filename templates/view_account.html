@@ -73,10 +73,14 @@
         <span id="account-stage">{{account.stage}}</span>
     </div>
     {% endif %}
-    {% if account_partner_db %}
     <div>
-        <label for="account-partners">Partner Program</label>
-        <span id="account-partners">{{ ', '.join(account_partner_db) }}</span>
+        <label for="tp-partner">TP-Link Partner Status</label>
+        <span id="tp-partner">{{ tp_partner_db or "Not a Partner"}}</span>
+    </div>
+    {% if competitor_partner_db %}
+    <div>
+        <label for="competitor-partners">Competitor Partner Program</label>
+        <span id="competitor-partners">{{ ', '.join(competitor_partner_db) }}</span>
     </div>
     {% endif %}
 
@@ -459,10 +463,17 @@ var basicInfoEdit = function() {
                 <option value="NOT INTERESTED">NOT INTERESTED</option>
                 <option value="NO POTENTIAL">NO POTENTIAL</option>
             </select>
-            <label for="account-partners">Partner Program</label>
-            <select class="form-control" name="account-partners" multiple="multiple">
-                {% for account_partner in account_partner_all %}
-                <option value="{{account_partner}}" {% if account_partner in account_partner_db %} selected{% endif %}>{{account_partner}}</option>
+            <label for="tp-partner">Partner Status</label>
+            <select class="form-control" name="tp-partner">
+                <option value=""{% if not tp_partner_db %} selected{% endif %}>Not a Partner</option>
+                {% for tp_partner in tp_partner_all %}
+                <option value="TP-Link {{tp_partner}}"{% if tp_partner == tp_partner_db %} selected{% endif %}>{{tp_partner}}</option>
+                {% endfor %}
+            </select>
+            <label for="competitor-partners">Competitor Partner Program</label>
+            <select class="form-control" name="competitor-partners" multiple="multiple">
+                {% for competitor_partner in competitor_partner_all %}
+                <option value="{{competitor_partner}}" {% if competitor_partner in competitor_partner_db %} selected{% endif %}>{{competitor_partner}}</option>
                 {% endfor %}
             </select>
             <br>
