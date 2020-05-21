@@ -2856,7 +2856,7 @@ def uploadCustomer():
                     )
                     session.add(newNameToAccount)
                     session.commit()
-                    flash('Accounts added, you can upload data now')
+                flash('Accounts added, you can upload data now')
                 else:
                     flash('Account already exists but unmapped, please map them first')
             return "pass"
