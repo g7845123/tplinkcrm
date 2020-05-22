@@ -1,5 +1,6 @@
 {% extends "template.html" %}
 {% block head %}
+<link href="{{url_for('static', filename='css/select2.min.css')}}" rel="stylesheet" />
 <link href="{{url_for('static', filename='datepicker/css/bootstrap-datepicker3.min.css')}}" rel="stylesheet" />
 {% endblock %}
 
@@ -14,11 +15,21 @@
                 <span class="input-group-addon">to</span>
                 <input type="text" class="input-sm form-control" id="end" name="end" value="{{report_day_end.strftime("%Y-%m-%d")}}" />
             </div>
+            <label for="store">Store</label>
+            <div class="input-group">
+                <select id="store" name="store">
+                    <option value="{{current_store}}">{{current_store}}</option>
+                    <option value="ALL">ALL</option>
+                    {% for store in stores %}
+                    <option value="{{store}}">{{store}}</option>
+                    {% endfor %}
+                </select>
+            </div>
             <button type="submit" class="btn btn-primary">Submit</button>
         </form>
     </div>
     {% if soi_df is defined %}
-    <h2>Grey Market Analysis - Result</h2>
+    <h2>Conrad SOI - {{current_store}} Store</h2>
     <table class="table table-striped" id="soi-table">
         <thead>
             <tr>
@@ -43,6 +54,8 @@
 {% endblock %}
 
 {% block script %}
+<!-- Select2 -->
+<script src="{{url_for('static', filename='js/select2.min.js')}}"></script>
 
 <!-- Date-Picker Plugin -->
 <script src="{{url_for('static', filename='datepicker/js/bootstrap-datepicker.min.js')}}"></script>
@@ -59,6 +72,8 @@ $(document).ready(function() {
         autoclose: true, 
         daysOfWeekDisabled: "023456", 
     });
+});
+var select2 = $("#store").select2({
 });
 </script>
 {% endblock %}

@@ -378,7 +378,14 @@ def conradSoiStore():
     report_day_end = request.args.get('end')
     report_day_start = parsing_date(report_day_start)
     report_day_end = parsing_date(report_day_end)
-    store = request.args.get('store')
+    current_store = request.args.get('store')
+    result = session.query(
+                ConradSellout.location.distinct().label('store'), 
+            ).filter(
+                ConradSellout.company == 'DEUTSCHLAND', 
+                ConradSellout.type == 'FILIALEN', 
+            )
+    stores = [e.store for e in result]
     if not (report_day_start and report_day_end): 
         result = session.query(
                 ConradSellout
@@ -392,6 +399,7 @@ def conradSoiStore():
             login = login_session, 
             report_day_start = report_day_start, 
             report_day_end = report_day_end, 
+            stores = stores,
         )
     result = session.query(
             ConradSellout.product_id.label('product_id'), 
@@ -401,7 +409,12 @@ def conradSoiStore():
             ConradSellout.date <= report_day_end, 
             ConradSellout.company == 'DEUTSCHLAND', 
             ConradSellout.type == 'FILIALEN', 
-        ).group_by(
+        )
+    if current_store and current_store != "ALL":
+        result = result.filter(
+                ConradSellout.location == current_store, 
+            )
+    result = result.group_by(
             'product_id'
         )
     soi_df = pd.read_sql(result.statement, result.session.bind)
@@ -417,7 +430,12 @@ def conradSoiStore():
         ).filter(
             ConradStock.date == report_day_end, 
             ConradStock.type == 'FILIALEN DEUTSCHLAND', 
-        ).group_by(
+        )
+    if current_store and current_store != "ALL":
+        result = result.filter(
+                ConradStock.location == current_store, 
+            )
+    result = result.group_by(
             'product_id'
         )
     result_df = pd.read_sql(result.statement, result.session.bind)
@@ -433,6 +451,8 @@ def conradSoiStore():
         report_day_start = report_day_start, 
         report_day_end = report_day_end, 
         soi_df = soi_df, 
+        stores = stores, 
+        current_store = current_store, 
     )
 
 @app.route('/conrad-sellout/detail')
@@ -2829,6 +2849,7 @@ def uploadCustomer():
         unmapped_customers = request.form.get('unmapped-customer')
         if unmapped_customers:
             unmapped_customers = pd.read_json(unmapped_customers, typ='series')
+            upload_successful = True
             for unmapped_customer in unmapped_customers:
                 count1 = session.query(
                     Account
@@ -2856,9 +2877,11 @@ def uploadCustomer():
                     )
                     session.add(newNameToAccount)
                     session.commit()
-                flash('Accounts added, you can upload data now')
                 else:
                     flash('Account already exists but unmapped, please map them first')
+                    upload_successful = False
+                if upload_successful:
+                    flash('Accounts added, you can upload data now')
             return "pass"
         # Request comes from file upload
         account_file = request.files.get('account-file')
