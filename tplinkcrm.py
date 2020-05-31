@@ -1347,7 +1347,7 @@ def mergeAccount():
 #         email_notification = request.form.get('email-notification')
 #         for task_to in task_tos: 
 #             new_task = Task(
-#                 created = datetime.utcnow(), 
+#                 created = datetime.now(), 
 #                 subject = subject, 
 #                 task_from_id = login_session['id'], 
 #                 task_to_id = task_to, 
@@ -4248,7 +4248,7 @@ def editPricelink():
             session.add(price_link)
             session.commit()
             priceHistory = PriceHistory(
-                timestamp = datetime.utcnow(), 
+                timestamp = datetime.now(), 
                 price_link_id = price_link.id, 
                 price = price, 
             )
@@ -4624,64 +4624,33 @@ def viewAccount(account_id):
             competitor_partner_db.append(e)
     if request.method == 'POST':
         submission_type = request.form.get('submit')
-        if submission_type == "new-note":
+        if submission_type == "edit-note":
             note_type = request.form.get('type')
             note_creator = request.form.get('note-creator')
+            note_id = int(request.form.get('note-id'))
             note = request.form.get('note')
-            if note_type:
+            # New note
+            if note_id == 0:
                 accountNote = AccountNote(
-                        created = datetime.utcnow(), 
-                        modified = datetime.utcnow(), 
-                        type = note_type, 
-                        note = note, 
+                        created = datetime.now(), 
                         account_id = account_id, 
                         user_id = note_creator, 
                     )
-                session.add(accountNote)
-                session.commit()
-                flash('Changes saved')
+            # Edit existing note
             else:
-                flash('Please select note type')
-        elif submission_type == "edit-note":
-            note_id = request.form.get('note-id')
-            note = request.form.get('note')
-            accountNote = session.query(
-                AccountNote
-            ).filter(
-                AccountNote.id == note_id
-            ).one()
+                accountNote = session.query(
+                    AccountNote
+                ).filter(
+                    AccountNote.id == note_id
+                ).one()
+            accountNote.type = note_type, 
             accountNote.note = note
-            accountNote.modified = datetime.utcnow()
+            accountNote.modified = datetime.now()
             session.add(accountNote)
             session.commit()
             flash('Changes saved')
-        elif submission_type == "new-contact":
-            contact_name = request.form.get('contact-name')
-            contact_title = request.form.get('contact-title')
-            contact_email = request.form.get('contact-email')
-            contact_phone = request.form.get('contact-phone')
-            contact_mobile = request.form.get('contact-mobile')
-            contact_note = request.form.get('contact-note')
-            contact_primary = request.form.get('contact-primary')
-            contact_primary = bool(contact_primary)
-            accountContact = AccountContact(
-                    created = datetime.utcnow(), 
-                    modified = datetime.utcnow(), 
-                    name = contact_name, 
-                    title = contact_title, 
-                    email = contact_email, 
-                    phone = contact_phone, 
-                    mobile = contact_mobile, 
-                    note = contact_note, 
-                    primary = contact_primary, 
-                    account_id = account_id, 
-                    user_id = user.id, 
-                )
-            session.add(accountContact)
-            session.commit()
-            flash('Changes saved')
         elif submission_type == "edit-contact":
-            contact_id = request.form.get('contact-id')
+            contact_id = int(request.form.get('contact-id'))
             contact_name = request.form.get('contact-name')
             contact_title = request.form.get('contact-title')
             contact_email = request.form.get('contact-email')
@@ -4690,12 +4659,21 @@ def viewAccount(account_id):
             contact_note = request.form.get('contact-note')
             contact_primary = request.form.get('contact-primary')
             contact_primary = bool(contact_primary)
-            accountContact = session.query(
-                AccountContact
-            ).filter(
-                AccountContact.id == contact_id
-            ).one()
-            accountContact.modified = datetime.utcnow()
+            # New contact
+            if contact_id == 0:
+                accountContact = AccountContact(
+                        created = datetime.now(), 
+                        user_id = user.id, 
+                        account_id = account.id
+                    )
+            # Edit existing contact
+            else:
+                accountContact = session.query(
+                    AccountContact
+                ).filter(
+                    AccountContact.id == contact_id
+                ).one()
+            accountContact.modified = datetime.now()
             accountContact.name = contact_name
             accountContact.title = contact_title
             accountContact.email = contact_email
@@ -5382,7 +5360,7 @@ def forgotPwd():
         newResetPwdToken = ResetPwdToken(
                 uid = user.id, 
                 token = token, 
-                timestamp = datetime.utcnow()
+                timestamp = datetime.now()
             )
         session.add(newResetPwdToken)
         session.commit()
@@ -5410,7 +5388,7 @@ def resetPwd():
     if not result:
         flash('Invalid reset token')
         return redirect('/')
-    delta = datetime.utcnow() - result.timestamp
+    delta = datetime.now() - result.timestamp
     if delta.total_seconds() > 24*60*60:
         flash('Reset token expired')
         return redirect('/')
@@ -5623,6 +5601,9 @@ class PackingListView(ModelView):
 class AccountPartnerView(ModelView):
     column_filters = ['account', 'partner']
 
+class AccountContactView(ModelView):
+    column_filters = ['account', 'name']
+
 class ConradSelloutView(ModelView):
     column_filters = ['date', 'product']
     
@@ -5650,7 +5631,7 @@ admin.add_view(ModelView(Role, session))
 admin.add_view(ModelView(EmailSubscription, session))
 admin.add_view(PackingListView(PackingListDetail, session))
 admin.add_view(AccountNoteView(AccountNote, session))
-admin.add_view(ModelView(AccountContact, session))
+admin.add_view(AccountContactView(AccountContact, session))
 admin.add_view(AccountPartnerView(AccountPartner, session))
 admin.add_view(ConradSelloutView(ConradSellout, session))
 admin.add_view(ConradStockView(ConradStock, session))

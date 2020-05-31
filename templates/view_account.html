@@ -6,107 +6,136 @@
 
 {% block content %}
 
-<!-- Modal -->
-<div class="modal fade" id="form-modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content">
-      <div class="modal-body" id="modal-body"></div>
-    </div>
-  </div>
-</div>
-
-    <h1 class="page-header">
-         Details
-    </h1>
-    <h2>Basic info <button class="btn btn-primary" onclick="basicInfoEdit()" type="button">Edit</button></h2>
-    <div>
-        <label for="account-name">Account name</label>
-        <span id="account-name">{{account.name}}</span>
-    </div>
-    <div>
-        <label for="account-tax">Tax number</label>
-        <span id="account-tax">{{account.tax}}</span>
-    </div>
-    <div>
-        <label for="account-type">Type</label>
-        <span id="account-type">{{account.type}}</span>
-    </div>
-    <div>
-        <label for="account-manager">Manager</label>
-        <span id="account-manager">{{account.manager}}</span>
-    </div>
-    <div>
-        <label for="account-url">Website</label>
-        <span id="account-url"><a href="{{account.url}}" target="_blank">{{account.url}}</a></span>
-    </div>
-    <div>
-        <label for="account-location">Location</label>
-        <span id="account-location">{{"{}, {} {}".format(account.street, account.postcode, account.city)}}</span>
-    </div>
-    <div>
-        <label for="account-store">Offline store</label>
-        <span id="account-store">{{account.store}}</span>
-    </div>
-    {% if account.pam %}
-    <div>
-        <label for="account-pam">PAM</label>
-        <span id="account-pam">{{'{:0.0f}'.format(account.pam/100)}}</span>
-    </div>
-    <div>
-        <label for="account-share">Share</label>
-        <span id="account-share">{{"{0:.0%}".format(past_365_days_revenue/account.pam)}} ({{past_365_days_revenue/100}} in past 365 days)</span>
-    </div>
-    {% endif %}
-    {% if account.target %}
-    <div>
-        <label for="account-target">Target</label>
-        <span id="account-target"> {{'{:0.0f}'.format(account.target/100)}}</span>
-    </div>
-    <div>
-        <label for="account-progress">Progress</label>
-        <span id="account-progress">{{"{0:.0%}".format(ytd_revenue/account.target)}} (YTD {{ytd_revenue/100}})</span>
-    </div>
-    {% endif %}
-    {% if account.stage %}
-    <div>
-        <label for="account-stage">Stage</label>
-        <span id="account-stage">{{account.stage}}</span>
-    </div>
-    {% endif %}
-    <div>
-        <label for="tp-partner">TP-Link Partner Status</label>
-        <span id="tp-partner">{{ tp_partner_db or "Not a Partner"}}</span>
-    </div>
-    {% if competitor_partner_db %}
-    <div>
-        <label for="competitor-partners">Competitor Partner Program</label>
-        <span id="competitor-partners">{{ ', '.join(competitor_partner_db) }}</span>
-    </div>
-    {% endif %}
-
-    <h2>Contacts <button class="btn btn-primary" onclick="newContact()" type="button">Add</button></h2>
-    
-    <form id="new-contact" class="form-group"  method="POST" action="?start={{date_start.strftime('%Y-%m-%d')}}&end={{date_end.strftime('%Y-%m-%d')}}" style="display:none" >
-        <label for="contact-name">Name</label>
-        <input class="form-control" name="contact-name">
-        <label for="contact-title">Title</label>
-        <input class="form-control" name="contact-title">
-        <label for="contact-email">Email</label>
-        <input class="form-control" name="contact-email">
-        <label for="contact-phone">Phone</label>
-        <input class="form-control" name="contact-phone">
-        <label for="contact-mobile">Mobile</label>
-        <input class="form-control" name="contact-mobile">
-        <label for="contact-note">Additional Note</label>
-        <textarea class="form-control" name="contact-note" placeholder="Additional Notes here"></textarea>
-        <div class="form-check">
-            <input class="form-check-input" type="checkbox" value="contact-primary" name="contact-primary">
-            <label class="form-check-label" for="contact-primary">Primary Contact</label>
+    <h2>Basic info <button class="btn btn-primary" onclick="basicInfoToggle()" type="button">Edit</button></h2>
+    <div id="basic-info">
+        <div>
+            <label for="account-name">Account name</label>
+            <span id="account-name">{{account.name}}</span>
         </div>
-        <button class="btn btn-primary" type="submit" name="submit" value="new-contact">Submit</button>
-    </form>
+        <div>
+            <label for="account-tax">Tax number</label>
+            <span id="account-tax">{{account.tax}}</span>
+        </div>
+        <div>
+            <label for="account-type">Type</label>
+            <span id="account-type">{{account.type}}</span>
+        </div>
+        <div>
+            <label for="account-manager">Manager</label>
+            <span id="account-manager">{{account.manager}}</span>
+        </div>
+        <div>
+            <label for="account-url">Website</label>
+            <span id="account-url"><a href="{{account.url}}" target="_blank">{{account.url}}</a></span>
+        </div>
+        <div>
+            <label for="account-location">Location</label>
+            <span id="account-location">{{"{}, {} {}".format(account.street, account.postcode, account.city)}}</span>
+        </div>
+        <div>
+            <label for="account-store">Offline store</label>
+            <span id="account-store">{{account.store}}</span>
+        </div>
+        {% if account.pam %}
+        <div>
+            <label for="account-pam">PAM</label>
+            <span id="account-pam">{{'{:0.0f}'.format(account.pam/100)}}</span>
+        </div>
+        <div>
+            <label for="account-share">Share</label>
+            <span id="account-share">{{"{0:.0%}".format(past_365_days_revenue/account.pam)}} ({{past_365_days_revenue/100}} in past 365 days)</span>
+        </div>
+        {% endif %}
+        {% if account.target %}
+        <div>
+            <label for="account-target">Target</label>
+            <span id="account-target"> {{'{:0.0f}'.format(account.target/100)}}</span>
+        </div>
+        <div>
+            <label for="account-progress">Progress</label>
+            <span id="account-progress">{{"{0:.0%}".format(ytd_revenue/account.target)}} (YTD {{ytd_revenue/100}})</span>
+        </div>
+        {% endif %}
+        {% if account.stage %}
+        <div>
+            <label for="account-stage">Stage</label>
+            <span id="account-stage">{{account.stage}}</span>
+        </div>
+        {% endif %}
+        <div>
+            <label for="tp-partner">TP-Link Partner Status</label>
+            <span id="tp-partner">{{ tp_partner_db or "Not a Partner"}}</span>
+        </div>
+        {% if competitor_partner_db %}
+        <div>
+            <label for="competitor-partners">Competitor Partner Program</label>
+            <span id="competitor-partners">{{ ', '.join(competitor_partner_db) }}</span>
+        </div>
+        {% endif %}
+    </div>
+    <div id="basic-info-edit" style="display:none">
+        <form class="form-group"  method="POST" action="?start={{date_start.strftime('%Y-%m-%d')}}&end={{date_end.strftime('%Y-%m-%d')}}">
+            <label for="account-name">Account Name</label>
+            <input class="form-control" name="account-name" value="{{account.name}}" readonly>
+            <label for="account-tax">Tax Number</label>
+            <input class="form-control" name="account-tax" value="{{account.tax or ''}}">
+            <label for="account-type">Type</label>
+            <select class="form-control" name="account-type">
+                <option id='account-type-default' selected>{{account.type}}</option>
+                <option value="UNCATEGORIZED">UNCATEGORIZED</option>
+                <option value="ONLINE">ONLINE</option>
+                <option value="SUB-DISTY">SUB-DISTY</option>
+                <option value="ABROAD">ABROAD</option>
+                <option value="ISP">ISP</option>
+                <option value="RESELLER">RESELLER</option>
+                <option value="RETAIL">RETAIL</option>
+                <option value="B2B">B2B</option>
+                <option value="OTHER INDUSTRY">OTHER INDUSTRY</option>
+            </select>
+            <label for="account-url">Website</label>
+            <input class="form-control" name="account-url" value="{{account.url or ''}}">
+            <label for="account-street">Street</label>
+            <input class="form-control" name="account-street" value="{{account.street or ''}}">
+            <label for="account-postcode">Postcode</label>
+            <input class="form-control" name="account-postcode" value="{{account.postcode or ''}}">
+            <label for="account-city">City</label>
+            <input class="form-control" name="account-city" value="{{account.city or ''}}">
+            <label for="account-pam">PAM</label>
+            <input class="form-control" name="account-pam" value="{% if account.pam %}{{'{:0.0f}'.format(account.pam/100)}}{% else %}{% endif %}">
+            <div class="form-check">
+                <label class="form-check-label" for="account-store">Offline store</label>
+                <input class="form-check-input" type="checkbox" value="account-store" name="account-store" {% if account.store %}checked {% endif %}>
+            </div>
+            <label for="account-stage">Stage</label>
+            <select class="form-control" name="account-stage">
+                <option id='account-stage-default' value='' selected>{{account.stage or ''}}</option>
+                <option value="ACQUISITION">ACQUISITION</option>
+                <option value="DEVELOPMENT">DEVELOPMENT</option>
+                <option value="RETENTION">RETENTION</option>
+                <option value="NOT INTERESTED">NOT INTERESTED</option>
+                <option value="NO POTENTIAL">NO POTENTIAL</option>
+            </select>
+            <label for="tp-partner">Partner Status</label>
+            <select class="form-control" name="tp-partner">
+                <option value=""{% if not tp_partner_db %} selected{% endif %}>Not a Partner</option>
+                {% for tp_partner in tp_partner_all %}
+                <option value="TP-Link {{tp_partner}}"{% if tp_partner == tp_partner_db %} selected{% endif %}>{{tp_partner}}</option>
+                {% endfor %}
+            </select>
+            <label for="competitor-partners">Competitor Partner Program</label>
+            <select class="form-control" name="competitor-partners" multiple="multiple">
+                {% for competitor_partner in competitor_partner_all %}
+                <option value="{{competitor_partner}}" {% if competitor_partner in competitor_partner_db %} selected{% endif %}>{{competitor_partner}}</option>
+                {% endfor %}
+            </select>
+            <br>
+            <button class="btn btn-primary" type="submit" name="submit" value="basic-info-edit">Submit</button>
+            <button class="btn btn-primary" onclick="basicInfoToggle()" type="button">Cancel</button>
+        </form>
+    </div>
 
-    <table class="table table-striped">
+    <h2>Contacts <button class="btn btn-primary" onclick="contactToggle(0)" type="button">Add</button></h2>
+    <table class="table table-striped" id="contact">
         <thead>
             <tr>
                 <th>Name</th>
@@ -129,10 +158,7 @@
                 {% else %}
                 <td>{{row.note[:50]+'...'}}</td>
                 {% endif %}
-                <td>
-                    <button class="btn btn-link" onclick="contact{{row.id}}Edit()" type="button">Detail</button>
-                    <button class="btn btn-link" onclick="contact{{row.id}}Delete()" type="button">Delete</button>
-                </td>
+                <td><a onclick="contactToggle({{row.id}})" role="button">Edit</a></td>
             </tr>
         {% endfor %}
         {% for idx, row in account_contact_df[account_contact_df['primary']==False].iterrows() %}
@@ -146,59 +172,110 @@
                 {% else %}
                 <td>{{row.note[:50]+'...'}}</td>
                 {% endif %}
-                <td>
-                    <button class="btn btn-link" onclick="contact{{row.id}}Edit()" type="button">Detail</button>
-                    <button class="btn btn-link" onclick="contact{{row.id}}Delete()" type="button">Delete</button>
-                </td>
+                <td><a onclick="contactToggle({{row.id}})" role="button">Edit</a></td>
             </tr>
         {% endfor %}
         </tbody>
     </table>
+    <form id="contact-edit" class="form-group"  method="POST" action="?start={{date_start.strftime('%Y-%m-%d')}}&end={{date_end.strftime('%Y-%m-%d')}}" style="display:none" >
+        <input name="contact-id" type="hidden" id="contact-id">
+        <label for="contact-name">Name</label>
+        <input class="form-control" name="contact-name" id="contact-name">
+        <label for="contact-title">Title</label>
+        <input class="form-control" name="contact-title" id="contact-title">
+        <label for="contact-email">Email</label>
+        <input class="form-control" name="contact-email" id="contact-email">
+        <label for="contact-phone">Phone</label>
+        <input class="form-control" name="contact-phone" id="contact-phone">
+        <label for="contact-mobile">Mobile</label>
+        <input class="form-control" name="contact-mobile" id="contact-mobile">
+        <label for="contact-note">Additional Note</label>
+        <textarea class="form-control" name="contact-note" placeholder="Additional Notes here"></textarea>
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" value="contact-primary" name="contact-primary" id="contact-primary">
+            <label class="form-check-label" for="contact-primary">Primary Contact</label>
+        </div>
+        <button class="btn btn-primary" type="submit" name="submit" value="edit-contact">Submit</button>
+        <button class="btn btn-primary" type="button" onclick="contactToggle(0)">Cancel</button>
+        <button class="btn btn-danger" type="button" data-toggle="modal" data-target="#contact-delete-modal" id="contact-delete-btn">Delete</button>
+    </form>
 
     <h2>Partner Profile</h2>
 
-    {% if (account_note_df['type']=='PRIMARY').any() %}
-    {% for idx, row in account_note_df[account_note_df['type']=='PRIMARY'].iterrows() %}
-    <div style="white-space: pre-wrap;">{{row.note}}</div>
-        <button class="btn btn-primary" onclick="note{{row.id}}Edit()" type="button">Edit</button>
-    </form>
-    {% endfor %}
-    {% else %}
-    <div>No data available.<button class="btn btn-link" onclick="newPrimaryNote()" type="button">Add now!</button></div>
-    {% endif %}
-
-
-    <h2>Interaction Log <button class="btn btn-primary" onclick="newNote()" type="button">Add</button></h2>
-
-    {% if (account_note_df['type']!='PRIMARY').any() %}
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Date</th>
-                <th>Manager</th>
-                <th>Type</th>
-                <th>Note</th>
-                <th>Detail</th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for idx, row in account_note_df[account_note_df['type']!='PRIMARY'].iterrows() %}
-                <td>{{row.created.strftime('%Y-%m-%d')}}</td>
-                <td>{{row.manager_name}}</td>
-                <td>{{row.type}}</td>
-                {% if row.note|length < 100 %}
-                <td>{{row.note[:100]}}</td>
-                {% else %}
-                <td>{{row.note[:100]+'...'}}</td>
-                {% endif %}
-                <td><button class="btn btn-link" onclick="note{{row.id}}Edit()" type="button">Detail</button></td>
-            </tr>
+    <div id='partner-profile'>
+        {% if (account_note_df['type']=='PRIMARY').any() %}
+        {% for idx, row in account_note_df[account_note_df['type']=='PRIMARY'].iterrows() %}
+        <div style="white-space: pre-wrap;">{{row.note}}</div>
+            <button class="btn btn-primary" onclick="noteToggle('primary', {{row.id}})" type="button">Edit</button>
+        </form>
         {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <div>No data available</div>
-    {% endif %}
+        {% else %}
+        <div>No data available.<a onclick="noteToggle('primary', 0)" role="button">Add now!</a></div>
+        {% endif %}
+    </div>
+    <form id="partner-profile-edit" class="form-group"  method="POST" action="?start={{date_start.strftime('%Y-%m-%d')}}&end={{date_end.strftime('%Y-%m-%d')}}" style="display:none">
+        <input name="note-id" type="hidden" id="primary-id">
+        <input name="type" value="PRIMARY" type="hidden">
+        <input name="note-creator" value="{{user.id}}" type="hidden">
+        <textarea class="form-control" name="note" placeholder="Edit Notes here" id="primary-note"></textarea>
+        <button class="btn btn-primary" type="submit" name="submit" value="edit-note">Submit</button>
+        <button class="btn btn-primary" onclick="noteToggle('primary', 0)" type="button">Cancel</button>
+    </form>
+
+    <h2>Interaction Log <button class="btn btn-primary" onclick="noteToggle('interaction', 0)" type="button">Add</button></h2>
+
+    <div id='interaction'>
+        {% if (account_note_df['type']!='PRIMARY').any() %}
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Manager</th>
+                    <th>Type</th>
+                    <th>Note</th>
+                    <th>Detail</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for idx, row in account_note_df[account_note_df['type']!='PRIMARY'].iterrows() %}
+                    <td>{{row.created.strftime('%Y-%m-%d')}}</td>
+                    <td>{{row.manager_name}}</td>
+                    <td>{{row.type}}</td>
+                    {% if row.note|length < 100 %}
+                    <td>{{row.note[:100]}}</td>
+                    {% else %}
+                    <td>{{row.note[:100]+'...'}}</td>
+                    {% endif %}
+                    <td><a onclick="noteToggle('interaction', {{row.id}})" role="button">Detail</a></td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div>No data available</div>
+        {% endif %}
+    </div>
+    <form id="interaction-edit" class="form-group"  method="POST" action="?start={{date_start.strftime('%Y-%m-%d')}}&end={{date_end.strftime('%Y-%m-%d')}}" style="display:none">
+        <input name="note-id" type="hidden" id="interaction-id">
+        <label for="type">Type</label>
+        <select class="form-control" name="type" id="interaction-type">
+            {% for interaction_type in INTERACTION_TYPE_ALL %}
+            <option value="{{interaction_type}}">{{interaction_type}}</option>
+            {% endfor %}
+        </select>
+        <div id="interaction-creator-div">
+            <label for="note-creator">Creator</label>
+            <select class="form-control" name="note-creator">
+                {% for manager in managers %}
+                <option value={{manager.id}} {% if manager.id == user.id %}selected{% endif %}>{{manager.name}}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <label for="interaction-note">Note</label>
+        <textarea class="form-control" name="note" placeholder="Edit Notes here" id="interaction-note"></textarea>
+        <button class="btn btn-primary" type="submit" name="submit" value="edit-note">Submit</button>
+        <button class="btn btn-primary" onclick="noteToggle('interaction', 0)" type="button">Cancel</button>
+    </form>
 
     <h2>Purchase report</h2>
     {% if not monthview_df.empty %}
@@ -287,6 +364,22 @@
     {% else %}
     <div>No data available</div>
     {% endif %}
+    <!-- Delete Contact Confirmation -->
+    <div class="modal fade" id="contact-delete-modal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-body" id="modal-body">
+                    <form class="form-group"  method="POST" action="?start={{date_start.strftime('%Y-%m-%d')}}&end={{date_end.strftime('%Y-%m-%d')}}">
+                        <p>Are you sure to delete this contact?</p>
+                        <input name="contact-id" type="hidden" id="contact-delete-id">
+                        <button class="btn btn-danger" type="submit" name="submit" value="delete-contact">Delete</button>
+                        <button type="button" class="btn btn-primary" data-dismiss="modal">Cancel</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
 {% endblock %}
 
 {% block script %}
@@ -296,7 +389,105 @@
 <script src="{{url_for('static', filename='js/select2.min.js')}}"></script>
 
 <script>
-var adaptiveTextarea = function() {
+$('select').select2({
+    width: "100%"
+});
+function basicInfoToggle() {
+    $('#basic-info').toggle();
+    $('#basic-info-edit').toggle();
+};
+var accountContacts = {
+    0: {
+        name: "", 
+        title: "", 
+        email: "", 
+        phone: "", 
+        mobile: "", 
+        note: ``, 
+        primary: "", 
+    }, 
+    {% for idx, row in account_contact_df.iterrows() %}
+    {{row.id}}: {
+        name: "{{row.contact_name}}", 
+        title: "{{row.title}}", 
+        email: "{{row.email}}", 
+        phone: "{{row.phone}}", 
+        mobile: "{{row.mobile}}", 
+        note: `{{row.note}}`, 
+        primary: "{{row.primary}}", 
+    }, 
+    {% endfor %}
+}
+function contactToggle(contactId) {
+    $('#contact').toggle();
+    $('#contact-edit').toggle();
+    $('#contact-id').val(contactId);
+    let contact = accountContacts[contactId];
+    $('#contact-name').val(contact.name);
+    $('#contact-title').val(contact.title);
+    $('#contact-email').val(contact.email);
+    $('#contact-phone').val(contact.phone);
+    $('#contact-mobile').val(contact.mobile);
+    $('#contact-note').val(contact.note);
+    if(contact.primary == 'True') {
+        $('contact-primary').prop('checked', true);
+    }
+    else {
+        $('#contact-primary').prop('checked', false);
+    }
+    $('#contact-delete-id').val(contactId);
+    if (contactId == 0) {
+        $('#contact-delete-btn').hide();
+    }
+    else {
+        $('#contact-delete-btn').show();
+    }
+};
+var notes = {
+    0: {
+        type: "MEETING", 
+        note: "", 
+    }, 
+    {% for idx, row in account_note_df.iterrows() %}
+    {{row.id}}: {
+        type: "{{row.type}}", 
+        note: `{{row.note}}`, 
+    }, 
+    {% endfor %}
+}
+$('textarea').bind('input', function () {
+    this.style.height = 'auto';
+    this.style.height = this.scrollHeight + 'px';
+});
+function noteToggle(noteType, noteId) {
+    let note = notes[noteId];
+    // $('#note').html(note.note);
+    // if (noteId == 0) {
+    //     $('#note-creator-div').show()
+    //     $('#note-type-div').show()
+    // }
+    // else {
+    //     $('#note-creator-div').hide()
+    // }
+    if (noteType == 'primary') {
+        $('#partner-profile').toggle();
+        $('#partner-profile-edit').toggle();
+        $('#primary-id').val(noteId);
+        $('#primary-note').val(note.note);
+    }
+    else if (noteType == 'interaction'){
+        $('#interaction').toggle();
+        $('#interaction-edit').toggle();
+        $('#interaction-id').val(noteId);
+        $('#interaction-type').val(note.type).trigger('change');
+        $('#interaction-note').val(note.note);
+        if (noteId == 0) {
+            $('#interaction-creator-div').show()
+        }
+        else {
+            $('#interaction-creator-div').hide()
+        }
+    }
     $('textarea').each(function () {
         this.setAttribute('style', 'height:' + Math.max(50, this.scrollHeight) + 'px;overflow-y:hidden;');
     }).on('input', function () {
@@ -304,186 +495,9 @@ var adaptiveTextarea = function() {
         this.style.height = this.scrollHeight + 'px';
     });
     $('select').select2({
-        dropdownParent: $('#form-modal')
+        width: "100%"
     });
 }
-adaptiveTextarea();
-var newNote = function() {
-    var modalBody = $('#modal-body');
-    var newNoteForm = `
-        <form class="form-group"  method="POST" action="?start={{date_start.strftime('%Y-%m-%d')}}&end={{date_end.strftime('%Y-%m-%d')}}">
-            <label for="type">Type</label>
-            <select class="form-control" name="type" id="note-type">
-                <option id='note-type-default' selected>Choose a note type</option>
-                {% for interaction_type in INTERACTION_TYPE_ALL %}
-                <option value="{{interaction_type}}">{{interaction_type}}</option>
-                {% endfor %}
-            </select>
-            <label for="note-creator">Creator</label>
-            <select class="form-control" name="note-creator">
-                {% for manager in managers %}
-                <option value={{manager.id}} {% if manager.id == user.id %}selected{% endif %}>{{manager.name}}</option>
-                {% endfor %}
-            </select>
-            <label for="note">Note</label>
-            <textarea class="form-control" name="note" placeholder="Edit Notes here"></textarea>
-            <button class="btn btn-primary" type="submit" name="submit" value="new-note">Submit</button>
-        </form>
-    `;
-    modalBody.html(newNoteForm);
-    $('#form-modal').modal('show');
-    $('#form-modal').on('shown.bs.modal', adaptiveTextarea);
-};
-var newPrimaryNote = function() {
-    var modalBody = $('#modal-body');
-    var newNoteForm = `
-        <form id="new-note" class="form-group"  method="POST" action="?start={{date_start.strftime('%Y-%m-%d')}}&end={{date_end.strftime('%Y-%m-%d')}}">
-            <label for="type">Type</label>
-            <select class="form-control" name="type" id="note-type" readonly>
-                <option id="note-type-primary" value="PRIMARY" selected>Primary</option>
-            </select>
-            <label for="note-creator">Creator</label>
-            <select class="form-control" name="note-creator">
-                {% for manager in managers %}
-                <option value={{manager.id}} {% if manager.id == user.id %}selected{% endif %}>{{manager.name}}</option>
-                {% endfor %}
-            </select>
-            <label for="note">Note</label>
-            <textarea class="form-control" name="note" placeholder="Edit Notes here"></textarea>
-            <button class="btn btn-primary" type="submit" name="submit" value="new-note">Submit</button>
-        </form>
-    `;
-    modalBody.html(newNoteForm);
-    $('#form-modal').on('shown.bs.modal', adaptiveTextarea);
-    $('#form-modal').modal('show');
-};
-var newContact = function() {
-    $('#new-contact').show();
-};
-{% for idx, row in account_contact_df.iterrows() %}
-var contact{{row.id}}Edit = function() {
-    // $('#contact-{{row.id}}').toggle();
-    var modalBody = $('#modal-body');
-    var contactForm = `
-        <form id="contact-{{row.id}}" class="form-group"  method="POST" action="?start={{date_start.strftime('%Y-%m-%d')}}&end={{date_end.strftime('%Y-%m-%d')}}">
-            <input name="contact-id" type="hidden" value={{row.id}}>
-            <label for="contact-name">Name</label>
-            <input class="form-control" name="contact-name" value="{{row.contact_name}}">
-            <label for="contact-title">Title</label>
-            <input class="form-control" name="contact-title" value="{{row.title}}">
-            <label for="contact-email">Email</label>
-            <input class="form-control" name="contact-email" value="{{row.email}}">
-            <label for="contact-phone">Phone</label>
-            <input class="form-control" name="contact-phone" value="{{row.phone}}">
-            <label for="contact-mobile">Mobile</label>
-            <input class="form-control" name="contact-mobile" value="{{row.mobile}}">
-            <label for="contact-note">Additional Note</label>
-            <textarea class="form-control" name="contact-note" placeholder="Additional Notes here">{{row.note}}</textarea>
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox" value="contact-primary" name="contact-primary" {% if row['primary'] %} checked {% endif %}>
-                <label class="form-check-label" for="contact-primary">Primary Contact</label>
-            </div>
-            <button class="btn btn-primary" type="submit" name="submit" value="edit-contact">Submit</button>
-        </form>
-    `;
-    modalBody.html(contactForm);
-    $('#form-modal').on('shown.bs.modal', adaptiveTextarea);
-    $('#form-modal').modal('show');
-    
-};
-var contact{{row.id}}Delete = function() {
-    var modalBody = $('#modal-body');
-    var contactForm = `
-        <form id="contact-{{row.id}}" class="form-group"  method="POST" action="?start={{date_start.strftime('%Y-%m-%d')}}&end={{date_end.strftime('%Y-%m-%d')}}">
-            <p>Are you sure to delete this contact?</p>
-            <input name="contact-id" type="hidden" value={{row.id}}>
-            <button class="btn btn-danger" type="submit" name="submit" value="delete-contact">Delete</button>
-        </form>
-    `;
-    modalBody.html(contactForm);
-    $('#form-modal').on('shown.bs.modal', adaptiveTextarea);
-    $('#form-modal').modal('show');
-};
-{% endfor %}
-{% for idx, row in account_note_df.iterrows() %}
-var note{{row.id}}Edit = function() {
-    var modalBody = $('#modal-body');
-    var noteForm = `
-        <form class="form-group"  method="POST" action="?start={{date_start.strftime('%Y-%m-%d')}}&end={{date_end.strftime('%Y-%m-%d')}}">
-            <input name="note-id" type="hidden" value={{row.id}}>
-            <textarea class="form-control" id="note-{{row.id}}" name="note">{{row.note}}</textarea>
-            <button class="btn btn-primary" type="submit" name="submit" value="edit-note">Submit</button>
-        </form>
-    `;
-    modalBody.html(noteForm);
-    $('#form-modal').on('shown.bs.modal', adaptiveTextarea);
-    $('#form-modal').modal('show');
-};
-{% endfor %}
-
-var basicInfoEdit = function() {
-    var modalBody = $('#modal-body');
-    var basicInfoForm = `
-        <form class="form-group"  method="POST" action="?start={{date_start.strftime('%Y-%m-%d')}}&end={{date_end.strftime('%Y-%m-%d')}}">
-            <label for="account-tax">Tax Number</label>
-            <input class="form-control" name="account-tax" value="{{account.tax or ''}}">
-            <label for="account-type">Type</label>
-            <select class="form-control" name="account-type">
-                <option id='account-type-default' selected>{{account.type}}</option>
-                <option value="UNCATEGORIZED">UNCATEGORIZED</option>
-                <option value="ONLINE">ONLINE</option>
-                <option value="SUB-DISTY">SUB-DISTY</option>
-                <option value="ABROAD">ABROAD</option>
-                <option value="ISP">ISP</option>
-                <option value="RESELLER">RESELLER</option>
-                <option value="RETAIL">RETAIL</option>
-                <option value="B2B">B2B</option>
-                <option value="OTHER INDUSTRY">OTHER INDUSTRY</option>
-            </select>
-            <label for="account-url">Website</label>
-            <input class="form-control" name="account-url" value="{{account.url or ''}}">
-            <label for="account-street">Street</label>
-            <input class="form-control" name="account-street" value="{{account.street or ''}}">
-            <label for="account-postcode">Postcode</label>
-            <input class="form-control" name="account-postcode" value="{{account.postcode or ''}}">
-            <label for="account-city">City</label>
-            <input class="form-control" name="account-city" value="{{account.city or ''}}">
-            <label for="account-pam">PAM</label>
-            <input class="form-control" name="account-pam" value="{% if account.pam %}{{'{:0.0f}'.format(account.pam/100)}}{% else %}{% endif %}">
-            <div class="form-check">
-                <label class="form-check-label" for="account-store">Offline store</label>
-                <input class="form-check-input" type="checkbox" value="account-store" name="account-store" {% if account.store %}checked {% endif %}>
-            </div>
-            <label for="account-stage">Stage</label>
-            <select class="form-control" name="account-stage">
-                <option id='account-stage-default' value='' selected>{{account.stage or ''}}</option>
-                <option value="ACQUISITION">ACQUISITION</option>
-                <option value="DEVELOPMENT">DEVELOPMENT</option>
-                <option value="RETENTION">RETENTION</option>
-                <option value="NOT INTERESTED">NOT INTERESTED</option>
-                <option value="NO POTENTIAL">NO POTENTIAL</option>
-            </select>
-            <label for="tp-partner">Partner Status</label>
-            <select class="form-control" name="tp-partner">
-                <option value=""{% if not tp_partner_db %} selected{% endif %}>Not a Partner</option>
-                {% for tp_partner in tp_partner_all %}
-                <option value="TP-Link {{tp_partner}}"{% if tp_partner == tp_partner_db %} selected{% endif %}>{{tp_partner}}</option>
-                {% endfor %}
-            </select>
-            <label for="competitor-partners">Competitor Partner Program</label>
-            <select class="form-control" name="competitor-partners" multiple="multiple">
-                {% for competitor_partner in competitor_partner_all %}
-                <option value="{{competitor_partner}}" {% if competitor_partner in competitor_partner_db %} selected{% endif %}>{{competitor_partner}}</option>
-                {% endfor %}
-            </select>
-            <br>
-            <button class="btn btn-primary" type="submit" name="submit" value="basic-info-edit">Submit</button>
-        </form>
-    `;
-    modalBody.html(basicInfoForm);
-    $('#form-modal').modal('show');
-    $('#form-modal').on('shown.bs.modal', adaptiveTextarea);
-};
 
 {% if not monthview_df.empty %}
 Highcharts.chart('sellin-by-month', {
