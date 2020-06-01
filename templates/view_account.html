@@ -74,7 +74,7 @@
         {% endif %}
     </div>
     <div id="basic-info-edit" style="display:none">
-        <form class="form-group"  method="POST" action="?start={{date_start.strftime('%Y-%m-%d')}}&end={{date_end.strftime('%Y-%m-%d')}}">
+        <form class="form-group"  method="POST" action="{{ url_for('editAccount', account_id=account.id, start=date_start.strftime('%Y-%m-%d'), end=date_end.strftime('%Y-%m-%d')) }}">
             <label for="account-name">Account Name</label>
             <input class="form-control" name="account-name" value="{{account.name}}" readonly>
             <label for="account-tax">Tax Number</label>
@@ -177,7 +177,7 @@
         {% endfor %}
         </tbody>
     </table>
-    <form id="contact-edit" class="form-group"  method="POST" action="?start={{date_start.strftime('%Y-%m-%d')}}&end={{date_end.strftime('%Y-%m-%d')}}" style="display:none" >
+    <form id="contact-edit" class="form-group"  method="POST" action="{{ url_for('editAccount', account_id=account.id, start=date_start.strftime('%Y-%m-%d'), end=date_end.strftime('%Y-%m-%d')) }}" style="display:none" >
         <input name="contact-id" type="hidden" id="contact-id">
         <label for="contact-name">Name</label>
         <input class="form-control" name="contact-name" id="contact-name">
@@ -213,7 +213,7 @@
         <div>No data available.<a onclick="noteToggle('primary', 0)" role="button">Add now!</a></div>
         {% endif %}
     </div>
-    <form id="partner-profile-edit" class="form-group"  method="POST" action="?start={{date_start.strftime('%Y-%m-%d')}}&end={{date_end.strftime('%Y-%m-%d')}}" style="display:none">
+    <form id="partner-profile-edit" class="form-group"  method="POST" action="{{ url_for('editAccount', account_id=account.id, start=date_start.strftime('%Y-%m-%d'), end=date_end.strftime('%Y-%m-%d')) }}" style="display:none">
         <input name="note-id" type="hidden" id="primary-id">
         <input name="type" value="PRIMARY" type="hidden">
         <input name="note-creator" value="{{user.id}}" type="hidden">
@@ -255,7 +255,7 @@
         <div>No data available</div>
         {% endif %}
     </div>
-    <form id="interaction-edit" class="form-group"  method="POST" action="?start={{date_start.strftime('%Y-%m-%d')}}&end={{date_end.strftime('%Y-%m-%d')}}" style="display:none">
+    <form id="interaction-edit" class="form-group"  method="POST" action="{{ url_for('editAccount', account_id=account.id, start=date_start.strftime('%Y-%m-%d'), end=date_end.strftime('%Y-%m-%d')) }}" style="display:none">
         <input name="note-id" type="hidden" id="interaction-id">
         <label for="type">Type</label>
         <select class="form-control" name="type" id="interaction-type">
@@ -369,7 +369,7 @@
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-body" id="modal-body">
-                    <form class="form-group"  method="POST" action="?start={{date_start.strftime('%Y-%m-%d')}}&end={{date_end.strftime('%Y-%m-%d')}}">
+                    <form class="form-group"  method="POST" action="{{ url_for('editAccount', account_id=account.id, start=date_start.strftime('%Y-%m-%d'), end=date_end.strftime('%Y-%m-%d')) }}">
                         <p>Are you sure to delete this contact?</p>
                         <input name="contact-id" type="hidden" id="contact-delete-id">
                         <button class="btn btn-danger" type="submit" name="submit" value="delete-contact">Delete</button>

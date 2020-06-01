@@ -4596,14 +4596,10 @@ def sellinDetail():
             sellin_df = sellin_df.head(5000), 
         )
 
-@app.route('/account/<int:account_id>', methods=['GET', 'POST'])
+@app.route('/account/<int:account_id>/edit', methods=['POST'])
 @login_required(['ES', 'DE'])
-def viewAccount(account_id):
+def editAccount(account_id):
     user = getUserById(login_session['id'])
-    date_start = request.args.get('start')
-    date_start = parsing_date(date_start)
-    date_end = request.args.get('end')
-    date_end = parsing_date(date_end)
     account = session.query(
             Account, 
         ).filter(
@@ -4615,13 +4611,6 @@ def viewAccount(account_id):
             AccountPartner.account_id == account_id
         )
     account_partner_db = [e.partner for e in account_partner_query]
-    competitor_partner_db = []
-    tp_partner_db = ''
-    for e in account_partner_db:
-        if 'TP-Link' in e:
-            tp_partner_db = e[8:]
-        else:
-            competitor_partner_db.append(e)
     if request.method == 'POST':
         submission_type = request.form.get('submit')
         if submission_type == "edit-note":
@@ -4755,6 +4744,33 @@ def viewAccount(account_id):
                     start = request.args.get('start'),
                     end = request.args.get('end')
                 ))
+
+@app.route('/account/<int:account_id>', methods=['GET'])
+@login_required(['ES', 'DE'])
+def viewAccount(account_id):
+    user = getUserById(login_session['id'])
+    date_start = request.args.get('start')
+    date_start = parsing_date(date_start)
+    date_end = request.args.get('end')
+    date_end = parsing_date(date_end)
+    account = session.query(
+            Account, 
+        ).filter(
+            Account.id == account_id, 
+        ).first()
+    account_partner_query = session.query(
+            AccountPartner
+        ).filter(
+            AccountPartner.account_id == account_id
+        )
+    account_partner_db = [e.partner for e in account_partner_query]
+    competitor_partner_db = []
+    tp_partner_db = ''
+    for e in account_partner_db:
+        if 'TP-Link' in e:
+            tp_partner_db = e[8:]
+        else:
+            competitor_partner_db.append(e)
     result = session.query(
             AccountNote.id, 
             AccountNote.created, 
