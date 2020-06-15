@@ -48,7 +48,7 @@
         </span>
     </div>
     </form>
-    <label for="manager">View by Manager </label>
+    <label for="manager">View by Manager</label>
     <div class="row">
         <div class="col-md-9">
             <p id="manager-msg" style="display: none;"></p>
@@ -60,6 +60,10 @@
             </select>
         </div>
     </div>
+
+    <h2>Project Pipeline</h2>
+    <a href="{{ url_for('addOpportunity') }}" class="btn btn-primary">Registration</a>
+    <a href="{{ url_for('opportunityDashboard') }}" class="btn btn-primary">Dashboard</a>
 
     <h2>Geographic Analysis</h2>
     <a href="/customerfinder/start" class="btn btn-primary">Customer Finder</a>

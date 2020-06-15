@@ -238,6 +238,7 @@
             </thead>
             <tbody>
             {% for idx, row in account_note_df[account_note_df['type']!='PRIMARY'].iterrows() %}
+                <tr>
                     <td>{{row.created.strftime('%Y-%m-%d')}}</td>
                     <td>{{row.manager_name}}</td>
                     <td>{{row.type}}</td>
@@ -276,6 +277,62 @@
         <button class="btn btn-primary" type="submit" name="submit" value="edit-note">Submit</button>
         <button class="btn btn-primary" onclick="noteToggle('interaction', 0)" type="button">Cancel</button>
     </form>
+
+    <h2>Opportunities <a class="btn btn-primary" href=" {{url_for('addOpportunity', account_id=account.id) | replace('_', '-') }} ">Add</a></h2>
+
+    {% if not opportunity_df.empty %}
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>PO Number</th>
+                <th>Name</th>
+                <th>Manager</th>
+                <th>Distributor</th>
+                <th>End User</th>
+                <th>Amount</th>
+                <th>Start</th>
+                <th>End</th>
+                <th>Status</th>
+                <th>Sector</th>
+                <th>Source</th>
+                <th>Type</th>
+                <th>Notes</th>
+                <th>Operation</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for idx, row in opportunity_df.iterrows() %}
+                <td>{{row.po_number}}</td>
+                <td>{{row.opportunity_name}}</td>
+                <td>{{row.manager_name}}</td>
+                <td>{{row.distri_name}}</td>
+                <td>{{row.end_user}}</td>
+                {% if row.amount %}
+                <td>{{'{:.0f}'.format(row.amount/100)}}</td>
+                {% else %}
+                <td>0</td>
+                {% endif %}
+                <td>{{row.date_start.strftime('%Y-%m-%d')}}</td>
+                <td>{{row.date_end.strftime('%Y-%m-%d')}}</td>
+                <td>{{row.status}}</td>
+                <td>{{row.sector}}</td>
+                <td>{{row.source}}</td>
+                <td>{{row.type}}</td>
+                {% if row.note|length < 50 %}
+                <td>{{row.note[:50]}}</td>
+                {% else %}
+                <td>{{row.note[:50]+'...'}}</td>
+                {% endif %}
+                <td>
+                    <a href="{{ url_for('editOpportunity', opportunity_id=row.id) }}">Detail</a>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div>No data available</div>
+    {% endif %}
 
     <h2>Purchase report</h2>
     {% if not monthview_df.empty %}
@@ -389,8 +446,10 @@
 <script src="{{url_for('static', filename='js/select2.min.js')}}"></script>
 
 <script>
-$('select').select2({
-    width: "100%"
+$(document).ready(function() {
+    $('select').select2({
+        width: "100%", 
+    });
 });
 function basicInfoToggle() {
     $('#basic-info').toggle();
@@ -461,14 +520,6 @@ $('textarea').bind('input', function () {
 });
 function noteToggle(noteType, noteId) {
     let note = notes[noteId];
-    // $('#note').html(note.note);
-    // if (noteId == 0) {
-    //     $('#note-creator-div').show()
-    //     $('#note-type-div').show()
-    // }
-    // else {
-    //     $('#note-creator-div').hide()
-    // }
     if (noteType == 'primary') {
         $('#partner-profile').toggle();
         $('#partner-profile-edit').toggle();
@@ -493,9 +544,6 @@ function noteToggle(noteType, noteId) {
     }).on('input', function () {
         this.style.height = 'auto';
         this.style.height = this.scrollHeight + 'px';
-    });
-    $('select').select2({
-        width: "100%"
     });
 }
 

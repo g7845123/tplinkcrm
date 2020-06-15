@@ -10,10 +10,6 @@
     text-align: center;
 }
  
-.input-group {
-    margin: 10px 0;
-}
- 
 .form-group {
     margin: 10px 0;
 }
@@ -37,7 +33,7 @@
 /* Global Styles */
  
 body {
-    margin-top: 100px;
+    padding-top: 100px;
 }
  
 a:hover {
@@ -59,7 +55,7 @@ a:hover {
         padding-left: 225px;
     }
     body {
-        margin-top: 50px;
+        padding-top: 50px;
     }
 }
  

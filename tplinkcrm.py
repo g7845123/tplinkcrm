@@ -12,7 +12,7 @@ from sqlalchemy.sql import label
 from sqlalchemy import extract
 from sqlalchemy.orm import aliased
 from sqlalchemy import and_, or_
-from database_setup import Base, User, Product, SkuToProduct, Stock, Sellout, Productline, PriceLink, PriceHistory, Task, ResetPwdToken, Account, NameToAccount, Sellin, Role, EmailSubscription, PackingListDetail, AccountNote, AccountContact, AccountPartner, AmazonReview, ConradSellout, ConradStock
+from database_setup import Base, User, Product, SkuToProduct, Stock, Sellout, Productline, PriceLink, PriceHistory, Task, ResetPwdToken, Account, NameToAccount, Sellin, Role, EmailSubscription, PackingListDetail, AccountNote, AccountContact, AccountPartner, AmazonReview, ConradSellout, ConradStock, Opportunity, OpportunityLine
 
 import requests
 from bs4 import BeautifulSoup
@@ -1165,6 +1165,24 @@ def mergeAccount():
                 AccountContact
             ).filter(
                 AccountContact.account_id == account_to_merge_id
+            )
+        for row in rows:
+            row.account_id = main_account_id
+            session.add(row)
+        # Account Partner
+        rows = session.query(
+                AccountPartner
+            ).filter(
+                AccountPartner.account_id == account_to_merge_id
+            )
+        for row in rows:
+            row.account_id = main_account_id
+            session.add(row)
+        # Opportunity
+        rows = session.query(
+                Opportunity
+            ).filter(
+                Opportunity.account_id == account_to_merge_id
             )
         for row in rows:
             row.account_id = main_account_id
@@ -2880,8 +2898,8 @@ def uploadCustomer():
                 else:
                     flash('Account already exists but unmapped, please map them first')
                     upload_successful = False
-                if upload_successful:
-                    flash('Accounts added, you can upload data now')
+            if upload_successful:
+                flash('Accounts added, you can upload data now')
             return "pass"
         # Request comes from file upload
         account_file = request.files.get('account-file')
@@ -4285,7 +4303,6 @@ def searchAccount():
                 login = login_session, 
                 account_name = account_name, 
                 account_df = account_df, 
-                report_range = report_range, 
             )
         newAccount = Account(
                 name = account_name.upper(), 
@@ -4313,15 +4330,7 @@ def searchAccount():
         session.commit()
         flash('Changes saved')
     account_name = request.args.get('account-name')
-    result = session.query(
-            Sellin
-        ).order_by(
-            Sellin.date.desc()
-        ).first()
-    report_day_start = date(result.date.year, 1, 1)
-    last_day = monthrange(result.date.year, result.date.month)[1]
-    report_day_end = date(result.date.year, result.date.month, last_day)
-    report_range = (report_day_start, report_day_end)
+    report_day_start, report_day_end = get_default_report_date_range()
     account_ids = session.query(
             NameToAccount.account_id.distinct()
         ).filter(
@@ -4366,7 +4375,6 @@ def searchAccount():
         login = login_session, 
         account_name = account_name, 
         account_df = account_df, 
-        report_range = report_range, 
     )
 
 @app.route('/sellin-by-channel')
@@ -4745,6 +4753,357 @@ def editAccount(account_id):
                     end = request.args.get('end')
                 ))
 
+@app.route('/opportunity/add', methods=['GET', 'POST'])
+@login_required(['ES', 'DE'])
+def addOpportunity():
+    user = getUserById(login_session['id'])
+    if request.method == 'GET':
+        account_id = request.args.get('account-id')
+        if account_id:
+            account = session.query(
+                    Account
+                ).filter(
+                    Account.id == account_id
+                ).first()
+        else:
+            account = None
+        distributors = session.query(
+                Account, 
+            ).filter(
+                Account.type == 'DISTRIBUTOR', 
+                Account.country == user.country, 
+            )
+        managers = session.query(
+                User
+            ).filter(
+                User.country == user.country
+            )
+        return render_template(
+                'add_opportunity.html', 
+                login = login_session, 
+                user = user, 
+                account = account, 
+                distributors = distributors, 
+                managers = managers, 
+                OPPORTUNITY_SOURCE_ALL = OPPORTUNITY_SOURCE_ALL, 
+                OPPORTUNITY_SECTOR_ALL = OPPORTUNITY_SECTOR_ALL, 
+                OPPORTUNITY_TYPE_ALL = OPPORTUNITY_TYPE_ALL, 
+                OPPORTUNITY_STATUS_ALL = OPPORTUNITY_STATUS_ALL, 
+            )
+    # Post
+    opportunity_name = request.form.get('opportunity-name')
+    creator_id = request.form.get('opportunity-creator')
+    account_id = request.form.get('opportunity-account-id')
+    end_user = request.form.get('opportunity-enduser')
+    distri_id = request.form.get('opportunity-distri-id')
+    date_start = request.form.get('opportunity-date-start')
+    date_end = request.form.get('opportunity-date-end')
+    status = request.form.get('opportunity-status')
+    po_number = request.form.get('po-number')
+    source = request.form.get('opportunity-source')
+    opportunity_type = request.form.get('opportunity-type')
+    sector = request.form.get('opportunity-sector')
+    note = request.form.get('opportunity-note', '')
+    date_start = parsing_date(date_start)
+    date_end = parsing_date(date_end)
+    newOpportunity = Opportunity(
+            created = datetime.now(), 
+            po_number = po_number, 
+            name = opportunity_name, 
+            end_user = end_user, 
+            status = status, 
+            note = note, 
+            source = source, 
+            sector = sector, 
+            type = opportunity_type, 
+            user_id = creator_id, 
+            account_id = account_id, 
+            distri_id = distri_id, 
+            date_start = date_start, 
+            date_end = date_end, 
+        )
+    session.add(newOpportunity)
+    session.commit()
+    flash('Opportunity added')
+    return redirect(url_for(
+            'editOpportunity', 
+            opportunity_id = newOpportunity.id, 
+        ))
+
+def updateOpportunityAmount(opportunity_id):
+    result = session.query(
+            OpportunityLine
+        ).filter(
+            OpportunityLine.opportunity_id == opportunity_id
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    amount = (result_df['qty']*result_df['distri_special']).sum()
+    if amount:
+        amount = int(amount)
+    else:
+        amount = 0
+    opportunity = session.query(
+            Opportunity
+        ).filter(
+            Opportunity.id == opportunity_id, 
+        ).first()
+    opportunity.amount = amount
+    session.add(opportunity)
+    session.commit()
+
+@app.route('/opportunity/edit/<int:opportunity_id>', methods=['GET', 'POST'])
+@login_required(['ES', 'DE'])
+def editOpportunity(opportunity_id):
+    user = getUserById(login_session['id'])
+    opportunity = session.query(
+            Opportunity
+        ).filter(
+            Opportunity.id == opportunity_id
+        ).first()
+    if request.method == 'GET':
+        distributors = session.query(
+                Account, 
+            ).filter(
+                Account.type == 'DISTRIBUTOR', 
+                Account.country == user.country, 
+            )
+        managers = session.query(
+                User
+            ).filter(
+                User.country == user.country
+            )
+        manager = managers.filter(
+                User.id == opportunity.user_id, 
+            ).first()
+        account = session.query(
+                Account
+            ).filter(
+                Account.id == opportunity.account_id
+            ).first()
+        distri = session.query(
+                Account
+            ).filter(
+                Account.id == opportunity.distri_id
+            ).first()
+        result = session.query(
+                OpportunityLine
+            ).filter(
+                OpportunityLine.opportunity_id == opportunity_id
+            )
+        product_ids = [e.product_id for e in result.all()]
+        opportunity_line_df = pd.read_sql(result.statement, result.session.bind)
+        result = session.query(
+                Sellin.product_id, 
+                func.sum(Sellin.qty).label('purchased'), 
+            ).filter(
+                Sellin.account_id == opportunity.account_id, 
+                Sellin.distri_id == opportunity.distri_id, 
+                Sellin.date >= opportunity.date_start, 
+                Sellin.date <= opportunity.date_end, 
+                Sellin.product_id.in_(product_ids), 
+            ).group_by(
+                Sellin.product_id
+            )
+        result_df = pd.read_sql(result.statement, result.session.bind)
+        opportunity_line_df = opportunity_line_df.merge(result_df, on='product_id', how='left')
+        result = session.query(
+                Product.id.label('product_id'), 
+                Product.sku.label('sku'), 
+            )
+        result_df = pd.read_sql(result.statement, result.session.bind)
+        opportunity_line_df = opportunity_line_df.merge(result_df, on='product_id', how='left')
+        return render_template(
+                'edit_opportunity.html', 
+                login = login_session, 
+                user = user, 
+                account = account, 
+                distri = distri, 
+                distributors = distributors, 
+                manager = manager, 
+                managers = managers, 
+                opportunity = opportunity, 
+                opportunity_line_df = opportunity_line_df, 
+                OPPORTUNITY_SOURCE_ALL = OPPORTUNITY_SOURCE_ALL, 
+                OPPORTUNITY_SECTOR_ALL = OPPORTUNITY_SECTOR_ALL, 
+                OPPORTUNITY_TYPE_ALL = OPPORTUNITY_TYPE_ALL, 
+                OPPORTUNITY_STATUS_ALL = OPPORTUNITY_STATUS_ALL, 
+            )
+    # Post
+    submission_type = request.form.get('submission-type')
+    if submission_type == 'edit-head':
+        opportunity_name = request.form.get('opportunity-name')
+        creator_id = request.form.get('opportunity-creator')
+        account_id = request.form.get('opportunity-account')
+        end_user = request.form.get('opportunity-enduser')
+        distri_id = request.form.get('opportunity-distri')
+        date_start = request.form.get('opportunity-date-start')
+        date_end = request.form.get('opportunity-date-end')
+        status = request.form.get('opportunity-status')
+        po_number = request.form.get('po-number')
+        source = request.form.get('opportunity-source')
+        opportunity_type = request.form.get('opportunity-type')
+        sector = request.form.get('opportunity-sector')
+        note = request.form.get('opportunity-note', '')
+        date_start = parsing_date(date_start)
+        date_end = parsing_date(date_end)
+        opportunity = session.query(
+                Opportunity
+            ).filter(
+                Opportunity.id == opportunity_id
+            ).first()
+        opportunity.name = opportunity_name
+        opportunity.creator_id = creator_id
+        opportunity.account_id = account_id
+        opportunity.end_user = end_user
+        opportunity.distri_id = distri_id
+        opportunity.date_start = date_start
+        opportunity.date_end = date_end
+        opportunity.status = status
+        opportunity.po_number = po_number
+        opportunity.source = source
+        opportunity.type = opportunity_type
+        opportunity.sector = sector
+        opportunity.note = note
+        session.add(opportunity)
+        session.commit()
+        flash('Changes saved')
+    if submission_type == 'upload-opportunity-line':
+        opportunity_line_file = request.files.get('opportunity-line-file')
+        opportunity_line_df = pd.read_excel(opportunity_line_file)
+        opportunity_line_df = parse_opportunity_line_file(opportunity_line_df)
+        for idx, row in opportunity_line_df.iterrows():
+            newOpportunityLine = OpportunityLine(
+                    qty = row.qty, 
+                    distri_normal = int(row.distri_normal*100), 
+                    distri_special = int(row.distri_special*100), 
+                    opportunity_id = opportunity_id, 
+                    product_id = row.product_id, 
+                )
+            session.add(newOpportunityLine)
+            session.commit()
+        updateOpportunityAmount(opportunity_id)
+        flash('Opportunity line uploaded')
+    if submission_type == 'delete-opportunity-line':
+        opportunity_line_id = request.form.get('opportunity-line-delete-id')
+        session.query(
+                OpportunityLine
+            ).filter(
+                OpportunityLine.id == opportunity_line_id, 
+            ).delete()
+        session.commit()
+        updateOpportunityAmount(opportunity_id)
+        flash('Opportunity line deleted')
+    return redirect(url_for(
+            'editOpportunity', 
+            opportunity_id = opportunity_id, 
+        ))
+
+def parse_opportunity_line_file(opportunity_line_df):
+    opportunity_line_df.rename(columns = {
+            'SKU': 'sku', 
+            'Qty': 'qty', 
+            'Distri Normal': 'distri_normal', 
+            'Distri Special': 'distri_special', 
+        }, inplace = True)
+    result = session.query(
+            SkuToProduct.sku.label('sku'), 
+            SkuToProduct.product_id.label('product_id')
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    opportunity_line_df = opportunity_line_df.merge(result_df, on='sku', how='left')
+    opportunity_line_df['qty'] = pd.to_numeric(opportunity_line_df['qty'], errors='coerce')
+    opportunity_line_df['distri_normal'] = pd.to_numeric(opportunity_line_df['distri_normal'], errors='coerce')
+    if opportunity_line_df['distri_normal'].isna().any():
+        errors.append('Not all Distri Normal are number, please double check')
+    opportunity_line_df['distri_special'] = pd.to_numeric(opportunity_line_df['distri_special'], errors='coerce')
+    return opportunity_line_df
+
+
+@app.route('/opportunity-line/upload-check', methods=['POST'])
+@login_required(['DE'])
+def opportunityLineUploadCheck():
+    user = getUserById(login_session['id'])
+    opportunity_line_file = request.files.get('opportunity-line-file')
+    opportunity_line_df = pd.read_excel(opportunity_line_file)
+    errors = []
+    # Check whether header in submission is ok
+    required_header = pd.Series(['SKU', 'Qty', 'Distri Normal', 'Distri Special'])
+    if not required_header.isin(opportunity_line_df.columns).all():
+        errors.append('Wrong headers')
+    opportunity_line_df = parse_opportunity_line_file(opportunity_line_df)
+    # Check whether all SKUs are mapped
+    if opportunity_line_df['product_id'].isna().any():
+        errors.append('Not all products are mapped')
+    if opportunity_line_df['qty'].isna().any():
+        errors.append('Not all Qty are number')
+    if opportunity_line_df['distri_special'].isna().any():
+        errors.append('Not all Distri Special are number')
+    return render_template(
+            'opportunity_line_check.html', 
+            login = login_session, 
+            errors = errors, 
+            opportunity_line_df = opportunity_line_df, 
+        )
+
+@app.route('/opportunity/dashboard', methods=['GET'])
+@login_required(['ES', 'DE'])
+def opportunityDashboard():
+    user = getUserById(login_session['id'])
+    result = session.query(
+            Opportunity.id, 
+            Opportunity.created, 
+            Opportunity.po_number, 
+            Opportunity.name.label('opportunity_name'), 
+            Opportunity.end_user, 
+            Opportunity.amount, 
+            Opportunity.date_start, 
+            Opportunity.date_end, 
+            Opportunity.status, 
+            Opportunity.sector, 
+            Opportunity.source, 
+            Opportunity.type, 
+            Opportunity.note, 
+            User.name.label('manager_name'), 
+            Opportunity.account_id, 
+            Opportunity.distri_id, 
+        ).filter(
+            Opportunity.user_id == User.id, 
+        ).order_by(
+            Opportunity.created.desc()
+        )
+    opportunity_df = pd.read_sql(result.statement, result.session.bind)
+    result = session.query(
+            Account.id.label('account_id'), 
+            Account.name.label('account_name'), 
+        ).filter(
+            Account.country == user.country, 
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    opportunity_df = opportunity_df.merge(result_df, on='account_id', how='left')
+    result = session.query(
+            Account.id.label('distri_id'), 
+            Account.name.label('distri_name'), 
+        ).filter(
+            Account.country == user.country, 
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    opportunity_df = opportunity_df.merge(result_df, on='distri_id', how='left')
+    return render_template(
+            'opportunity_dashboard.html', 
+            login = login_session, 
+            opportunity_df = opportunity_df, 
+        )
+
+def get_default_report_date_range():
+    result = session.query(
+            Sellin
+        ).order_by(
+            Sellin.date.desc()
+        ).limit(1)
+    recent_date = result.first().date
+    report_day_start = date(recent_date.year, 1, 1)
+    return report_day_start, recent_date
+
 @app.route('/account/<int:account_id>', methods=['GET'])
 @login_required(['ES', 'DE'])
 def viewAccount(account_id):
@@ -4753,6 +5112,8 @@ def viewAccount(account_id):
     date_start = parsing_date(date_start)
     date_end = request.args.get('end')
     date_end = parsing_date(date_end)
+    if not date_start or not date_end:
+        date_start, date_end = get_default_report_date_range()
     account = session.query(
             Account, 
         ).filter(
@@ -4798,6 +5159,46 @@ def viewAccount(account_id):
         ).filter(
             User.country == user.country
         )
+    result = session.query(
+            Opportunity.id, 
+            Opportunity.created, 
+            Opportunity.po_number, 
+            Opportunity.name.label('opportunity_name'), 
+            Opportunity.end_user, 
+            Opportunity.amount, 
+            Opportunity.date_start, 
+            Opportunity.date_end, 
+            Opportunity.status, 
+            Opportunity.sector, 
+            Opportunity.source, 
+            Opportunity.type, 
+            Opportunity.note, 
+            User.name.label('manager_name'), 
+            Opportunity.account_id, 
+            Opportunity.distri_id, 
+        ).filter(
+            Opportunity.user_id == User.id, 
+            Opportunity.account_id == account_id, 
+        ).order_by(
+            Opportunity.created.desc()
+        )
+    opportunity_df = pd.read_sql(result.statement, result.session.bind)
+    result = session.query(
+            Account.id.label('account_id'), 
+            Account.name.label('account_name'), 
+        ).filter(
+            Account.country == user.country, 
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    opportunity_df = opportunity_df.merge(result_df, on='account_id', how='left')
+    result = session.query(
+            Account.id.label('distri_id'), 
+            Account.name.label('distri_name'), 
+        ).filter(
+            Account.country == user.country, 
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    opportunity_df = opportunity_df.merge(result_df, on='distri_id', how='left')
     if account.type == 'DISTRIBUTOR':
         threshold = request.args.get('threshold')
         account_ids = session.query(
@@ -5024,6 +5425,7 @@ def viewAccount(account_id):
                 tp_partner_all = TP_PARTNER_ALL, 
                 tp_partner_db = tp_partner_db, 
                 competitor_partner_db = competitor_partner_db, 
+                opportunity_df = opportunity_df, 
                 INTERACTION_TYPE_ALL = INTERACTION_TYPE_ALL, 
             )
 
@@ -5651,6 +6053,8 @@ admin.add_view(AccountContactView(AccountContact, session))
 admin.add_view(AccountPartnerView(AccountPartner, session))
 admin.add_view(ConradSelloutView(ConradSellout, session))
 admin.add_view(ConradStockView(ConradStock, session))
+admin.add_view(ModelView(Opportunity, session))
+admin.add_view(ModelView(OpportunityLine, session))
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=80)

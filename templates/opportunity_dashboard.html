@@ -1,0 +1,59 @@
+{% extends "template.html" %}
+
+{% block head %}
+<link href="{{url_for('static', filename='css/select2.min.css')}}" rel="stylesheet" />
+<link rel="stylesheet" href="{{ url_for('static', filename='DataTables/css/jquery.dataTables.min.css') }}">
+{% endblock %}
+
+{% block content %}
+<h2>Opportunities Dashboard <a class="btn btn-primary" href=" {{ url_for('addOpportunity') }} ">Add</a></h2>
+<table class="display" id="opportunity-table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Manager</th>
+            <th>Partner/VAR</th>
+            <th>Project Value</th>
+            <th>End User</th>
+            <th>Distributor</th>
+            <th>Start</th>
+            <th>End</th>
+            <th>Stage</th>
+            <th>PO Number</th>
+            <th>Type</th>
+
+            <th>Operation</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for idx, row in opportunity_df.iterrows() %}
+            <td>{{row.opportunity_name}}</td>
+            <td>{{row.manager_name}}</td>
+            <td><a href="{{ url_for('viewAccount', account_id=row.account_id) }}" target="_blank">{{row.account_name}}</a></td>
+            <td>{{'{:.0f}'.format(row.amount/100)}}</td>
+            <td>{{row.end_user}}</td>
+            <td>{{row.distri_name}}</td>
+            <td>{{row.date_start.strftime('%Y-%m-%d')}}</td>
+            <td>{{row.date_end.strftime('%Y-%m-%d')}}</td>
+            <td>{{row.status}}</td>
+            <td>{{row.po_number}}</td>
+            <td>{{row.type}}</td>
+            <td>
+                <a href="{{ url_for('editOpportunity', opportunity_id=row.id) }}">Detail</a>
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
+
+{% block script %}
+<script src="{{ url_for('static', filename='DataTables/js/jquery.dataTables.min.js') }}"></script>
+<script>
+$(document).ready(function() {
+    $('#opportunity-table').DataTable({
+        paging: false
+    });
+});
+</script>
+{% endblock %}

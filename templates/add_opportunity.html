@@ -1,0 +1,127 @@
+{% extends "template.html" %}
+
+{% block head %}
+<link href="{{url_for('static', filename='datepicker/css/bootstrap-datepicker3.min.css')}}" rel="stylesheet" />
+<link href="{{url_for('static', filename='css/select2.min.css')}}" rel="stylesheet" />
+{% endblock %}
+
+{% block content %}
+<h2>New Opportunity</h2>
+<form id="opportunity-edit" class="form-group col-md-9"  method="POST"> <input name="opportunity-id" type="hidden">
+    <label for="opportunity-name">Opportunity Name</label>
+    <input class="form-control" name="opportunity-name" id="opportunity-name" required></input>
+    <div id="opportunity-creator-div">
+        <label for="opportunity-creator">Manager</label>
+        <select class="form-control" name="opportunity-creator" required>
+            {% for manager in managers %}
+            <option value={{manager.id}} {% if manager.id == user.id %}selected{% endif %}>{{manager.name}}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <label for="opportunity-account-id">Partner/Var</label>
+    <select class="form-control" id="opportunity-account-id" name="opportunity-account-id" required>
+        {% if account %}
+        <option value={{account.id}} selected>{{account.name}}</option>
+        {% endif %}
+    </select>
+    <label for="opportunity-enduser">End User</label>
+    <input class="form-control" name="opportunity-enduser" id="opportunity-enduser">
+    <label for="opportunity-distri-id">Distributor</label>
+    <select class="form-control" name="opportunity-distri-id" id="opportunity-distri-id" required>
+        <option></option>
+        {% for distributor in distributors %}
+        <option value={{distributor.id}}>{{distributor.name}}</option>
+        {% endfor %}
+    </select>
+    <label for="opportunity-date-range">Date Range</label>
+    <div class="input-daterange input-group" id="opportunity-date-range">
+        <span class="input-group-addon">From</span>
+        <input type="text" class="input-sm form-control" id="opportunity-date-start" name="opportunity-date-start" required>
+        <span class="input-group-addon">to</span>
+        <input type="text" class="input-sm form-control" id="opportunity-date-end" name="opportunity-date-end" required>
+    </div>
+    <label for="opportunity-status">Stage</label>
+    <select class="form-control" name="opportunity-status" required>
+        <option></option>
+        {% for status in OPPORTUNITY_STATUS_ALL %}
+        <option value={{status}}>{{status}}</option>
+        {% endfor %}
+    </select>
+    <label for="po-number">PO Number</label>
+    <input class="form-control" name="po-number" id="po-number">
+    <label for="opportunity-source">Project Source</label>
+    <select class="form-control" name="opportunity-source">
+        <option></option>
+        {% for source in OPPORTUNITY_SOURCE_ALL %}
+        <option value={{source}}>{{source}}</option>
+        {% endfor %}
+    </select>
+    <label for="opportunity-type">Project Type</label>
+    <select class="form-control" name="opportunity-type">
+        <option></option>
+        {% for type in OPPORTUNITY_TYPE_ALL %}
+        <option value={{type}}>{{type}}</option>
+        {% endfor %}
+    </select>
+    <label for="opportunity-sector">Customer Type</label>
+    <select class="form-control" name="opportunity-sector">
+        <option></option>
+        {% for sector in OPPORTUNITY_SECTOR_ALL %}
+        <option value={{sector}}>{{sector}}</option>
+        {% endfor %}
+    </select>
+    <label for="opportunity-note">Note</label>
+    <textarea class="form-control" name="opportunity-note" placeholder="Edit Notes here" id="opportunity-note"></textarea>
+    <button class="btn btn-primary" type="submit">Submit</button>
+    <button class="btn btn-primary" onclick="goBack()" type="button">Cancel</button>
+</form>
+{% endblock %}
+
+{% block script %}
+
+<!-- Select2 -->
+<script src="{{url_for('static', filename='js/select2.min.js')}}"></script>
+<!-- Date-Picker Plugin -->
+<script src="{{url_for('static', filename='datepicker/js/bootstrap-datepicker.min.js')}}"></script>
+
+<script>
+$(document).ready(function() {
+    $('#opportunity-date-start').datepicker({
+        format: "yyyy-mm-dd", 
+        autoclose: true, 
+    });
+    $('#opportunity-date-end').datepicker({
+        format: "yyyy-mm-dd", 
+        autoclose: true, 
+    });
+    $('select').select2({
+        width: "100%", 
+        sorter: data => data.sort((a, b) => a.text.localeCompare(b.text)),
+    });
+    $("#opportunity-account-id").select2({
+        placeholder: "Select an account",
+        width: '100%', 
+        ajax: {
+            url: "/account/query",
+            dataType: 'json',
+            delay: 250,
+            data: function (params) {
+                var query = {
+                    name: params.term,
+                }
+                // Query paramters will be ?name=[term]
+                return query;
+            }, 
+            processResults: function (data) {
+                return {
+                    results: data
+                }
+            }, 
+        },
+    });
+});
+function goBack() {
+    window.history.back();
+}
+</script>
+{% endblock %}

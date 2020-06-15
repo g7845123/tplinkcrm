@@ -1,0 +1,34 @@
+<div>
+    <p>Below is a preview of line data to be uploaded</p>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>SKU</th>
+                <th>Qty</th>
+                <th>Distri Normal</th>
+                <th>Distri Special</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for idx, row in opportunity_line_df.iterrows() %}
+            <tr>
+                <td>{{row.sku}}</td>
+                <td>{{row.qty}}</td>
+                <td>{{row.distri_normal}}</td>
+                <td>{{row.distri_special}}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if errors %}
+    <p>Upload failed due to below errors. Please fix and upload again</p>
+    <ul>
+        {% for e in errors %}
+        <li>{{e}}</li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p id="valid-upload">File is valid for upload</p>
+    {% endif %}
+</div>

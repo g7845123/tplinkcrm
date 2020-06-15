@@ -79,6 +79,46 @@ class AccountPartner(Base):
     account_id = Column(Integer, ForeignKey('account.id'))
     account = relationship('Account')
 
+class Opportunity(Base):
+    __tablename__ = 'opportunity'
+
+    id = Column(Integer, primary_key=True)
+    created = Column(DateTime)
+    po_number = Column(String(255))
+    name = Column(Text)
+    end_user = Column(String(255))
+    amount = Column(Integer)
+    date_start = Column(Date)
+    date_end = Column(Date)
+    status = Column(String(255))
+    note = Column(Text)
+    source = Column(String(255))
+    sector = Column(String(255))
+    type = Column(String(255))
+
+    user_id = Column(Integer, ForeignKey('user.id'))
+    manager = relationship('User')
+    account_id = Column(Integer, ForeignKey('account.id'))
+    account = relationship('Account', foreign_keys=[account_id])
+    distri_id = Column(Integer, ForeignKey('account.id'))
+    distri = relationship('Account', foreign_keys=[distri_id])
+
+    def __repr__(self):
+        return self.po_number
+
+class OpportunityLine(Base):
+    __tablename__ = 'opportunity_line'
+
+    id = Column(Integer, primary_key=True)
+    qty = Column(Integer)
+    distri_normal = Column(Integer)
+    distri_special = Column(Integer)
+
+    opportunity_id = Column(Integer, ForeignKey('opportunity.id'))
+    opportunity = relationship('Opportunity')
+    product_id = Column(Integer, ForeignKey('product.id'))
+    product = relationship('Product')
+
 class Account(Base):
     __tablename__ = 'account'
 
@@ -90,7 +130,6 @@ class Account(Base):
     postcode = Column(String(255))
     city = Column(String(255))
     type = Column(String(255))
-    manager = Column(String(255))
     url = Column(Text)
     pam = Column(Integer)
     target = Column(Integer)
