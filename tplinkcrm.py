@@ -1092,115 +1092,141 @@ def queryAccount():
         ]
     return simplejson.dumps(results)
 
-@app.route('/account/merge', methods=['GET', 'POST'])
-@login_required(['admin'])
-def mergeAccount():
-    accounts = session.query(
+@app.route('/account/merge-check')
+@login_required(['admin', 'uploader'])
+def accountMergeCheck():
+    id1 = int(request.args.get('id1'))
+    id2 = int(request.args.get('id2'))
+    account1 = session.query(
             Account
-        )
+        ).filter(
+            Account.id == id1
+        ).first()
+    account2 = session.query(
+            Account
+        ).filter(
+            Account.id == id2
+        ).first()
+    return render_template(
+        'account_merge_check.html', 
+        login = login_session, 
+        account1 = account1, 
+        account2 = account2, 
+    )
+
+
+@app.route('/account/merge', methods=['GET', 'POST'])
+@login_required(['admin', 'uploader'])
+def mergeAccount():
     if request.method == 'GET':
         return render_template(
             'account_merge.html', 
             login = login_session, 
         )
-    else: 
-        main_account_id = request.form.get('main-account')
-        account_to_merge_id = request.form.get('account-to-merge')
-        # Sellout
-        rows = session.query(
-                Sellout
-            ).filter(
-                Sellout.account_id == account_to_merge_id
-            )
-        for row in rows:
-            row.account_id = main_account_id
-            session.add(row)
-        # Stock
-        rows = session.query(
-                Stock
-            ).filter(
-                Stock.account_id == account_to_merge_id
-            )
-        for row in rows:
-            row.account_id = main_account_id
-            session.add(row)
-        # Sellin account
-        rows = session.query(
-                Sellin
-            ).filter(
-                Sellin.account_id == account_to_merge_id
-            )
-        for row in rows:
-            row.account_id = main_account_id
-            session.add(row)
-        # Sellin distri
-        rows = session.query(
-                Sellin
-            ).filter(
-                Sellin.distri_id == account_to_merge_id
-            )
-        for row in rows:
-            row.distri = main_account_id
-            session.add(row)
-        # Name to account
-        rows = session.query(
-                NameToAccount
-            ).filter(
-                NameToAccount.account_id == account_to_merge_id
-            )
-        for row in rows:
-            row.account_id = main_account_id
-            session.add(row)
-        # Account note
-        rows = session.query(
-                AccountNote
-            ).filter(
-                AccountNote.account_id == account_to_merge_id
-            )
-        for row in rows:
-            row.account_id = main_account_id
-            session.add(row)
-        # Account contact
-        rows = session.query(
-                AccountContact
-            ).filter(
-                AccountContact.account_id == account_to_merge_id
-            )
-        for row in rows:
-            row.account_id = main_account_id
-            session.add(row)
-        # Account Partner
-        rows = session.query(
-                AccountPartner
-            ).filter(
-                AccountPartner.account_id == account_to_merge_id
-            )
-        for row in rows:
-            row.account_id = main_account_id
-            session.add(row)
-        # Opportunity
-        rows = session.query(
-                Opportunity
-            ).filter(
-                Opportunity.account_id == account_to_merge_id
-            )
-        for row in rows:
-            row.account_id = main_account_id
-            session.add(row)
-        # Delete account
-        session.query(
-                Account
-            ).filter(
-                Account.id == account_to_merge_id
-            ).delete(
-                synchronize_session='fetch'
-            )
-        session.commit()
-        flash('Successfully merged')
+    # POST
+    main_account_id = request.form.get('main-account')
+    account_to_merge_id = request.form.get('account-to-merge')
+    if main_account_id == account_to_merge_id or not main_account_id:
+        flash('Invalid input')
         return render_template(
             'account_merge.html', 
             login = login_session, 
         )
+    # Sellout
+    rows = session.query(
+            Sellout
+        ).filter(
+            Sellout.account_id == account_to_merge_id
+        )
+    for row in rows:
+        row.account_id = main_account_id
+        session.add(row)
+    # Stock
+    rows = session.query(
+            Stock
+        ).filter(
+            Stock.account_id == account_to_merge_id
+        )
+    for row in rows:
+        row.account_id = main_account_id
+        session.add(row)
+    # Sellin account
+    rows = session.query(
+            Sellin
+        ).filter(
+            Sellin.account_id == account_to_merge_id
+        )
+    for row in rows:
+        row.account_id = main_account_id
+        session.add(row)
+    # Sellin distri
+    rows = session.query(
+            Sellin
+        ).filter(
+            Sellin.distri_id == account_to_merge_id
+        )
+    for row in rows:
+        row.distri = main_account_id
+        session.add(row)
+    # Name to account
+    rows = session.query(
+            NameToAccount
+        ).filter(
+            NameToAccount.account_id == account_to_merge_id
+        )
+    for row in rows:
+        row.account_id = main_account_id
+        session.add(row)
+    # Account note
+    rows = session.query(
+            AccountNote
+        ).filter(
+            AccountNote.account_id == account_to_merge_id
+        )
+    for row in rows:
+        row.account_id = main_account_id
+        session.add(row)
+    # Account contact
+    rows = session.query(
+            AccountContact
+        ).filter(
+            AccountContact.account_id == account_to_merge_id
+        )
+    for row in rows:
+        row.account_id = main_account_id
+        session.add(row)
+    # Account Partner
+    rows = session.query(
+            AccountPartner
+        ).filter(
+            AccountPartner.account_id == account_to_merge_id
+        )
+    for row in rows:
+        row.account_id = main_account_id
+        session.add(row)
+    # Opportunity
+    rows = session.query(
+            Opportunity
+        ).filter(
+            Opportunity.account_id == account_to_merge_id
+        )
+    for row in rows:
+        row.account_id = main_account_id
+        session.add(row)
+    # Delete account
+    session.query(
+            Account
+        ).filter(
+            Account.id == account_to_merge_id
+        ).delete(
+            synchronize_session='fetch'
+        )
+    session.commit()
+    flash('Successfully merged')
+    return render_template(
+        'account_merge.html', 
+        login = login_session, 
+    )
 
 # @app.route('/task/dashboard')
 # @login_required(['ES'])
@@ -4340,7 +4366,10 @@ def searchAccount():
     account_ids2 = session.query(
             Account.id
         ).filter(
-            Account.tax == account_name
+            or_(
+                Account.tax == account_name, 
+                Account.name.ilike('%'+account_name+'%'), 
+            )
         )
     result = session.query(
             Account.id.label('account_id'), 
@@ -4691,6 +4720,7 @@ def editAccount(account_id):
             session.commit()
             flash('Changes saved')
         elif submission_type == "basic-info-edit":
+            account_name = request.form.get('account-name')
             account_tax = request.form.get('account-tax')
             account_type = request.form.get('account-type')
             account_url = request.form.get('account-url')
@@ -4705,6 +4735,11 @@ def editAccount(account_id):
                 account_partners.append(tp_partner)
             account_store = request.form.get('account-store')
             account_store = bool(account_store)
+            if account.name: 
+                if 'manager' not in login_session['roles']:
+                    flash('Not authorized to change account name')
+                elif account_name.upper() != account.name:
+                    account.name = account_name.upper()
             if account_tax:
                 account.tax = account_tax.upper()
             if account_type:
@@ -4741,8 +4776,6 @@ def editAccount(account_id):
                     )
                 account_partner_db = [e.partner for e in account_partner_query]
                 flash('Partner status updated')
-            else: 
-                flash('Partner status unchanged')
             session.add(account)
             session.commit()
             flash('Changes saved')
@@ -4800,6 +4833,11 @@ def addOpportunity():
     date_end = request.form.get('opportunity-date-end')
     status = request.form.get('opportunity-status')
     po_number = request.form.get('po-number')
+    amount = request.form.get('amount')
+    try:
+        amount = int(float(amount)*100)
+    except:
+        amount = 0
     source = request.form.get('opportunity-source')
     opportunity_type = request.form.get('opportunity-type')
     sector = request.form.get('opportunity-sector')
@@ -4811,6 +4849,7 @@ def addOpportunity():
             po_number = po_number, 
             name = opportunity_name, 
             end_user = end_user, 
+            amount = amount, 
             status = status, 
             note = note, 
             source = source, 
@@ -4850,6 +4889,29 @@ def updateOpportunityAmount(opportunity_id):
     opportunity.amount = amount
     session.add(opportunity)
     session.commit()
+
+@app.route('/opportunity/delete', methods=['POST'])
+@login_required(['ES', 'DE'])
+def deleteOpportunity():
+    user = getUserById(login_session['id'])
+    opportunity_id = request.form.get('opportunity-id')
+    result = session.query(
+            OpportunityLine
+        ).filter(
+            OpportunityLine.opportunity_id == opportunity_id
+        ).delete()
+    session.commit()
+    result = session.query(
+            Opportunity
+        ).filter(
+            Opportunity.id == opportunity_id
+        ).delete()
+    session.commit()
+    flash('Opportunity is successfully deleted')
+    return redirect(url_for(
+            'opportunityDashboard', 
+        ))
+
 
 @app.route('/opportunity/edit/<int:opportunity_id>', methods=['GET', 'POST'])
 @login_required(['ES', 'DE'])
@@ -4940,6 +5002,11 @@ def editOpportunity(opportunity_id):
         date_end = request.form.get('opportunity-date-end')
         status = request.form.get('opportunity-status')
         po_number = request.form.get('po-number')
+        amount = request.form.get('opportunity-amount')
+        try:
+            amount = int(float(amount)*100)
+        except:
+            amount = 0
         source = request.form.get('opportunity-source')
         opportunity_type = request.form.get('opportunity-type')
         sector = request.form.get('opportunity-sector')
@@ -4955,6 +5022,7 @@ def editOpportunity(opportunity_id):
         opportunity.creator_id = creator_id
         opportunity.account_id = account_id
         opportunity.end_user = end_user
+        opportunity.amount = amount
         opportunity.distri_id = distri_id
         opportunity.date_start = date_start
         opportunity.date_end = date_end
@@ -5005,6 +5073,7 @@ def parse_opportunity_line_file(opportunity_line_df):
             'Distri Normal': 'distri_normal', 
             'Distri Special': 'distri_special', 
         }, inplace = True)
+    opportunity_line_df['sku'] = opportunity_line_df['sku'].apply(lambda x: x.strip().upper())
     result = session.query(
             SkuToProduct.sku.label('sku'), 
             SkuToProduct.product_id.label('product_id')
@@ -5063,18 +5132,15 @@ def opportunityDashboard():
             Opportunity.source, 
             Opportunity.type, 
             Opportunity.note, 
-            User.name.label('manager_name'), 
             Opportunity.account_id, 
             Opportunity.distri_id, 
-        ).filter(
-            Opportunity.user_id == User.id, 
-        ).order_by(
-            Opportunity.created.desc()
         )
     opportunity_df = pd.read_sql(result.statement, result.session.bind)
     result = session.query(
             Account.id.label('account_id'), 
             Account.name.label('account_name'), 
+            Account.type.label('account_type'), 
+            Account.user_id.label('manager_id'), 
         ).filter(
             Account.country == user.country, 
         )
@@ -5088,6 +5154,14 @@ def opportunityDashboard():
         )
     result_df = pd.read_sql(result.statement, result.session.bind)
     opportunity_df = opportunity_df.merge(result_df, on='distri_id', how='left')
+    result = session.query(
+            User.id.label('manager_id'), 
+            User.name.label('manager_name'), 
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    opportunity_df = opportunity_df.merge(result_df, on='manager_id', how='left')
+    opportunity_df['amount'] = opportunity_df['amount'].fillna(0)
+    opportunity_df['manager_name'] = opportunity_df['manager_name'].fillna('')
     return render_template(
             'opportunity_dashboard.html', 
             login = login_session, 
@@ -5154,6 +5228,7 @@ def viewAccount(account_id):
     account_contact_df.rename(columns = {
             'name': 'contact_name', 
         }, inplace = True)
+    account_contact_df.sort_values(by=['primary'], ascending=False, inplace=True)
     managers = session.query(
             User
         ).filter(

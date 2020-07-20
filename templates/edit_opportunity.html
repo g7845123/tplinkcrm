@@ -34,11 +34,7 @@
         </div>
         <div>
             <label for="opportunity-amount">Project Value</label>
-            {% if opportunity.amount %}
             <span id="opportunity-amount">{{'{:.2f}'.format(opportunity.amount/100)}}</span>
-            {% else %}
-            <span id="opportunity-amount">0</span>
-            {% endif %}
         </div>
         <div>
             <label for="opportunity-date-range">Date Range</label>
@@ -99,6 +95,8 @@
             <span class="input-group-addon">to</span>
             <input type="text" class="input-sm form-control" id="opportunity-date-end-edit" name="opportunity-date-end" value="{{opportunity.date_end.strftime("%Y-%m-%d")}}" required>
         </div>
+        <label for="opportunity-amount-edit">Project Value</label>
+        <input class="form-control" name="opportunity-amount" id="opportunity-amount-edit" value="{{'{:.2f}'.format(opportunity.amount/100)}}">
         <label for="opportunity-status-edit">Stage</label>
         <select class="form-control" name="opportunity-status" id="opportunity-status-edit" required>
             <option value="{{opportunity.status}}">{{opportunity.status}}</option>
@@ -134,6 +132,7 @@
         <input name="submission-type" value="edit-head" style="display:none;">
         <button class="btn btn-primary" type="submit" >Submit</button>
         <button class="btn btn-primary" onclick="opportunityInfoToggle()" type="button">Cancel</button>
+        <button class="btn btn-danger" type="button" data-toggle="modal" data-target="#opportunity-delete-modal" id="contact-delete-btn">Delete</button>
     </form>
 </div>
 <div class="row">
@@ -188,6 +187,21 @@
                     <input name="submission-type" value="delete-opportunity-line" style="display:none;">
                     <input name="opportunity-line-delete-id" type="hidden" id="opportunity-line-delete-id">
                     <button class="btn btn-danger" type="submit">Delete</button>
+                    <button type="button" class="btn btn-primary" data-dismiss="modal">Cancel</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Delete Opportunity Confirmation -->
+<div class="modal fade" id="opportunity-delete-modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-body" id="modal-body">
+                <form class="form-group"  method="POST" action="{{ url_for('deleteOpportunity') }}">
+                    <p>Are you sure to delete this opportunity? There is no way to recover it later</p>
+                    <input name="opportunity-id" type="hidden" value="{{opportunity.id }}">
+                    <button class="btn btn-danger" type="submit" name="submit" value="delete-opportunity">Delete</button>
                     <button type="button" class="btn btn-primary" data-dismiss="modal">Cancel</button>
                 </form>
             </div>

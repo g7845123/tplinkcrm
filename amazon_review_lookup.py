@@ -16,9 +16,11 @@ from dateparser.search import search_dates
 import argparse
 
 import re
+import os
 
 # The script will be triggered by Cron, add random delay to make it's irregular
-wait = random.uniform(0, 2*60*60)
+# wait = random.uniform(0, 2*60*60)
+wait = 0
 time.sleep(wait)
 print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
@@ -51,7 +53,54 @@ proxies = {
 }
 new_ip = requests.get('https://ident.me', proxies=proxies).text
 print('IP: {}'.format(new_ip))
+
+def get_html_to_parse(debug=False):
+    if debug:
+        # Will use cached file with priority
+        cachefile_name = '{}_review.html'.format(product.asin)
+        if cachefile_name in os.listdir('scraper_cache'):
+            print('DEBUG: {} {}'.format(product.sku, product.asin))
+            cachefile = open('scraper_cache/{}_review.html'.format(product.asin), 'rb')
+            return True, cachefile.read()
+    # Production mode or no cached file
+    review_url = review_url_template.format(country, product.asin, page_num)
+    response = requests.get(review_url, headers=fake_header, proxies=proxies, timeout=60)
+    outfile = open('scraper_cache/{}_review.html'.format(product.asin), 'wb')
+    outfile.write(response.content)
+    print('{} page {}: {} {}'.format(product.sku, page_num, review_url, response.status_code))
+    time.sleep(wait)
+    return False, response.content
+
+def html_stop_check(html_to_parse):
+    if country == 'DE':
+        if 'Leider stimmen' in str(html_to_parse):
+            print('Page number {} exceeds limit, exit'.format(page_num))
+            return 'break'
+        if '0,0 von 5 Sternen' in str(html_to_parse):
+            print('New product without review')
+            return 'break'
+        if 'Suchen Sie etwas' in str(html_to_parse):
+            print('Invalid url, skip')
+            return 'break'
+        return 'continue'
+
+def parse_review(review_div):
+    if country == 'DE':
+        # As star can only be integer, only extract the interger part
+        star = re.search('([0-9]),[0-9] von 5 Sternen', review_div.get_text())
+        star = star.group(1)
+        # star = star.replace(',', '.')
+        star = int(star)
+        review_id = review_div['id']
+        review_title = review_div.find('a', {'data-hook': 'review-title'}).span.text
+        review_body = review_div.find('span', {'data-hook': 'review-body'}).span.text
+        review_date = review_div.find('span', {'data-hook': 'review-date'}).text
+        review_date = search_dates(review_date, languages=[country.lower()])[0][1]
+        return star, review_id, review_title, review_body, review_date
+
 for product in products:
+    # debug = True
+    debug = False
     page_num = 1
     dup_review = 0
     print('===== Fetching review of {} ====='.format(product.sku))
@@ -63,20 +112,15 @@ for product in products:
             print('{} reviews already existed, skip to next product'.format(dup_review))
             break
         wait = random.uniform(1, 10)
-        time.sleep(wait)
-        review_url = review_url_template.format(country, product.asin, page_num)
-        response = requests.get(review_url, headers=fake_header, proxies=proxies, timeout=60)
-        print('{} page {}: {} {}'.format(product.sku, page_num, review_url, response.status_code))
-        if 'Leider stimmen' in str(response.content):
-            print('Page number {} exceeds limit, exit'.format(page_num))
+        debug, html_to_parse = get_html_to_parse(debug=debug)
+        if debug:
+            print('Debug mode')
+        else:
+            print('Production mode')
+        if html_stop_check(html_to_parse) != 'continue':
             break
-        if '0,0 von 5 Sternen' in str(response.content):
-            print('New product without review')
-            break
-        # Switch comment status of below 2 lines to test page parsing function
-        parsed_html = BeautifulSoup(response.content, 'html.parser')
-        # parsed_html = BeautifulSoup(open('review.html').read(), 'html.parser')
-        review_divs = parsed_html.findAll('div', {'data-hook': 'review'})
+        parsed_html = BeautifulSoup(html_to_parse, 'html5lib')
+        review_divs = parsed_html.find_all('div', {'data-hook': 'review'})
         if not review_divs:
             # possible be blocked
             print('Error detected, use new user agent and new IP')
@@ -97,16 +141,10 @@ for product in products:
         try_left = 100
         page_num += 1
         for review_div in review_divs:
-            # As star can only be integer, only extract the interger part
-            star = re.search('([0-9]),[0-9] von 5 Sternen', review_div.get_text())
-            star = star.group(1)
-            # star = star.replace(',', '.')
-            star = int(star)
-            review_id = review_div['id']
-            review_title = review_div.find('a', {'data-hook': 'review-title'}).span.text
-            review_body = review_div.find('span', {'data-hook': 'review-body'}).span.text
-            review_date = review_div.find('span', {'data-hook': 'review-date'}).text
-            review_date = search_dates(review_date)[0][1]
+            star, review_id, review_title, review_body, review_date = parse_review(review_div)
+            if debug:
+                print(star, review_id, review_title, review_body, review_date)
+                break
             result = session.query(
                     AmazonReview
                 ).filter(
@@ -129,3 +167,6 @@ for product in products:
             session.add(newRow)
             session.commit()
             print('Review {} recorded'.format(review_id))
+        if debug:
+            # continue with next product
+            break

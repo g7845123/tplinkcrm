@@ -13,6 +13,7 @@
             <th>Name</th>
             <th>Manager</th>
             <th>Partner/VAR</th>
+            <th>Business Unit</th>
             <th>Project Value</th>
             <th>End User</th>
             <th>Distributor</th>
@@ -21,15 +22,16 @@
             <th>Stage</th>
             <th>PO Number</th>
             <th>Type</th>
-
-            <th>Operation</th>
         </tr>
     </thead>
     <tbody>
     {% for idx, row in opportunity_df.iterrows() %}
-            <td>{{row.opportunity_name}}</td>
+            <td>
+                <a href="{{ url_for('editOpportunity', opportunity_id=row.id) }}">{{row.opportunity_name}}</a>
+            </td>
             <td>{{row.manager_name}}</td>
             <td><a href="{{ url_for('viewAccount', account_id=row.account_id) }}" target="_blank">{{row.account_name}}</a></td>
+            <td>{{row.account_type}}</td>
             <td>{{'{:.0f}'.format(row.amount/100)}}</td>
             <td>{{row.end_user}}</td>
             <td>{{row.distri_name}}</td>
@@ -38,9 +40,6 @@
             <td>{{row.status}}</td>
             <td>{{row.po_number}}</td>
             <td>{{row.type}}</td>
-            <td>
-                <a href="{{ url_for('editOpportunity', opportunity_id=row.id) }}">Detail</a>
-            </td>
         </tr>
     {% endfor %}
     </tbody>
@@ -52,7 +51,9 @@
 <script>
 $(document).ready(function() {
     $('#opportunity-table').DataTable({
-        paging: false
+        'paging': false, 
+        "order": [[ 7, "desc" ]], 
+        "stateSave": true,
     });
 });
 </script>

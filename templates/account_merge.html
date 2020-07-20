@@ -4,10 +4,7 @@
 {% endblock %}
 
 {% block content %}
-    <div class="alert alert-danger" role="alert">
-        <strong>Warning!</strong> This action can't be undone. 
-    </div>
-    <h2>Data by Sellout</h2>
+    <h2>Account Merge</h2>
     <form class="col-md-9" method="POST" action="/account/merge">
         <div class="form-group">
             <label for="main-account">Select the main account</label>
@@ -19,9 +16,7 @@
             <select id="account-to-merge" name="account-to-merge" class="select-account">
             </select>
         </div>
-        <center>
-            <button type="submit" class="btn btn-primary" id="submit">Submit</button>
-        </center>
+        <div id="merge-check"><div>
     </form>
 {% endblock %}
 
@@ -50,6 +45,30 @@ var select2 = $(".select-account").select2({
             }
         }, 
     },
+});
+$('.select-account').on('change', function (e) {
+    let mainAccount = $('#main-account').select2('data')[0];
+    let accountToMerge = $('#account-to-merge').select2('data')[0];
+    if(mainAccount && accountToMerge) {
+        $('#merge-check').html('Waiting server response, if you see this message for long time, please contact james.guo@tp-link.com');
+        $.ajax({
+            method: "GET",
+            url: "/account/merge-check",
+            data: { 
+                id1: mainAccount.id, 
+                id2: accountToMerge.id 
+            }
+        }).done(function( response ) {
+            $('#merge-check').html(response);
+        });
+    }
+    else {
+        $('#merge-check').html('Please select both accounts for merge check');
+    }
+});
+$('form').submit(function() {
+    $(this).find("button[type='submit']").html('Merging');
+    $(this).find("button[type='submit']").prop('disabled',true);
 });
 </script>
 {% endblock %}

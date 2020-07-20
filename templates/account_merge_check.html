@@ -1,0 +1,50 @@
+<div>
+    <p>Below is a preview of accounts selected</p>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th></th>
+                <th>Main Account</th>
+                <th>To be Merged</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Name</td>
+                <td>{{account1.name}}</td>
+                <td>{{account2.name}}</td>
+            </tr>
+            <tr>
+                <td>VAT</td>
+                <td>{{account1.tax}}</td>
+                <td>{{account2.tax}}</td>
+            </tr>
+            <tr>
+                <td>Street</td>
+                <td>{{account1.street}}</td>
+                <td>{{account2.street}}</td>
+            </tr>
+            <tr>
+                <td>City</td>
+                <td>{{account1.city}}</td>
+                <td>{{account2.city}}</td>
+            </tr>
+            <tr>
+                <td>Postcode</td>
+                <td>{{account1.postcode}}</td>
+                <td>{{account2.postcode}}</td>
+            </tr>
+            <tr>
+                <td>Type</td>
+                <td>{{account1.type}}</td>
+                <td>{{account2.type}}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="alert alert-danger" role="alert">
+        <strong>Warning!</strong> "To be Merged" Will be permanately deleted and there is no way to undo the change after clicking "Merge" button. Please review carefully before merging 
+    </div>
+    <p id="valid-merge"></p>
+    <button type="submit" class="btn btn-primary" id="submit">Merge</button>
+</div>

@@ -36,7 +36,7 @@
     <a href="/report-by-account/start" target="_blank" class="btn btn-primary">Customized Report by Account</a>
     <br><br>
 -->
-    <h2>Sales Report</h2>
+    <h2>Report</h2>
     <label for="account-search">View by Account</label>
     <form class="form-group" id="account-search" method="GET" action="/account/search">
     <div class="input-group col-md-9">
@@ -70,6 +70,11 @@
 
     <h2>Download product info</h2>
     <a href="/product/download" class="btn btn-primary">Product Info</a>
+
+    {% if 'uploader' in login.roles %}
+    <h2>Admin Section</h2>
+    <a href="{{ url_for('mergeAccount') }}" class="btn btn-primary">Merge Account</a>
+    {% endif %}
 
 <!--
     <h2>Operational Measurement</h2>
