@@ -86,6 +86,9 @@ def html_stop_check(html_to_parse):
 
 def parse_review(review_div):
     if country == 'DE':
+        if "Rezension aus Deutschland" not in review_div.text:
+            print("Not German review, skip")
+            return
         # As star can only be integer, only extract the interger part
         star = re.search('([0-9]),[0-9] von 5 Sternen', review_div.get_text())
         star = star.group(1)
@@ -99,8 +102,8 @@ def parse_review(review_div):
         return star, review_id, review_title, review_body, review_date
 
 for product in products:
-    # debug = True
     debug = False
+    # debug = True
     page_num = 1
     dup_review = 0
     print('===== Fetching review of {} ====='.format(product.sku))
@@ -141,10 +144,13 @@ for product in products:
         try_left = 100
         page_num += 1
         for review_div in review_divs:
-            star, review_id, review_title, review_body, review_date = parse_review(review_div)
+            result = parse_review(review_div)
+            if not result:
+                break
+            star, review_id, review_title, review_body, review_date = result
             if debug:
                 print(star, review_id, review_title, review_body, review_date)
-                break
+                continue
             result = session.query(
                     AmazonReview
                 ).filter(

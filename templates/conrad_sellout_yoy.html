@@ -1,0 +1,89 @@
+{% extends "template.html" %}
+
+{% block head %}
+<link href="{{ url_for('static', filename='webdatarocks/webdatarocks.min.css') }}" rel="stylesheet"/>
+{% endblock %}
+
+{% block content %}
+    <h1 class="page-header">
+        Conrad Sellout Detail
+    </h1>
+    <p>Last update: {{last_day.strftime('%Y-%m-%d')}}</p>
+    <p>Note: You can double click SKU to view sellout details</p>
+    <div id="sellout"></div>
+{% endblock %}
+
+
+{% block script %}
+<script src="{{ url_for('static', filename='webdatarocks/webdatarocks.toolbar.min.js') }}"></script>
+<script src="{{ url_for('static', filename='webdatarocks/webdatarocks.js') }}"></script>
+<script>
+var selloutJson = JSON.parse({{sellout_json|tojson|safe}});
+var pivot = new WebDataRocks({
+    container: "#sellout",
+    beforetoolbarcreated: customizeToolbar,
+    toolbar: true,
+    report: {
+        dataSource: {
+            data: selloutJson
+        }, 
+        "slice": {
+            "rows": [
+                {
+                    "uniqueName": "category"
+                },
+                {
+                    "uniqueName": "sku"
+                }
+            ],
+            "columns": [
+                {
+                    "uniqueName": "year"
+                },
+                {
+                    "uniqueName": "type"
+                },
+                {
+                    "uniqueName": "Measures"
+                }
+            ],
+            "measures": [
+                {
+                    "uniqueName": "qty",
+                    "aggregation": "sum"
+                }
+            ]
+        },
+        "options": {
+            "grid": {
+                "showGrandTotals": "columns"
+            }, 
+            "drillThrough": false
+        }
+        
+    }
+});
+function customizeToolbar(toolbar) {
+    var tabs = toolbar.getTabs(); // get all tabs from the toolbar
+    toolbar.getTabs = function() {
+        for(i=tabs.length-1;i>=0;i--){
+            let cur_tab = tabs[i];
+            if(['Connect', 'Open', 'Save', 'Export', 'Format', 'Options'].includes(cur_tab.title)){
+                tabs.splice(i, 1);
+            }
+        }
+        return tabs;
+    }
+}
+pivot.on('celldoubleclick', function(cell) {
+    let skuCell = pivot.getCell(cell.rowIndex, 0);
+    if(!skuCell.isTotal) {
+        let detailUrl = new URL("http://www.tplinkcrm.com/conrad-sellout/detail?product="+skuCell.label);
+        console.log(detailUrl)
+        let win = window.open(detailUrl, '_blank');
+        win.focus();
+    }
+    // alert(skuCell.label);
+});
+</script>
+{% endblock %}

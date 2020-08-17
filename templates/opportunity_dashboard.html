@@ -7,6 +7,7 @@
 
 {% block content %}
 <h2>Opportunities Dashboard <a class="btn btn-primary" href=" {{ url_for('addOpportunity') }} ">Add</a></h2>
+<p>Hint: you can use <a role="button" data-toggle="modal" data-target="#advance-filter-help">these options</a> for advanced filtering</p>
 <table class="display" id="opportunity-table">
     <thead>
         <tr>
@@ -48,13 +49,131 @@
 
 {% block script %}
 <script src="{{ url_for('static', filename='DataTables/js/jquery.dataTables.min.js') }}"></script>
+<script src="{{ url_for('static', filename='tablefilter/tablefilter.js') }}"></script>
 <script>
 $(document).ready(function() {
+    /*
     $('#opportunity-table').DataTable({
         'paging': false, 
         "order": [[ 7, "desc" ]], 
         "stateSave": true,
     });
+    */
+    var tf = new TableFilter('opportunity-table', {
+        base_path: "{{ url_for('static', filename='tablefilter/') }}", 
+        state: { // Enable state persistence
+            types: ['local_storage'], // Possible values: 'local_storage' 'hash' or 'cookie'
+            sort: true,
+        },
+        col_types: [
+            'string', // Name
+            'string', // Manager
+            'string', // Partner
+            'string', // BU
+            'number', // Amount
+            'string', // Enduser
+            'string', // Distributor
+            { type: 'date', format: '{yyyy}-{MM}-{dd}' }, // Start
+            { type: 'date', format: '{yyyy}-{MM}-{dd}' }, // End
+            'string', // Stage
+            'string', // PO Number
+            'string', // Type
+        ],
+        extensions: [{ name: 'sort' }]
+    });
+    tf.init();
 });
 </script>
+
+<!-- Modal for advanced search -->
+<div class="modal fade" id="advance-filter-help" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div id="wiki-body" class="gollum-markdown-content" style="margin: 10px">
+                <div class="markdown-body">
+                    <p>To perform advanced searches from text-box filters, you can use the following advanced operators: </p>
+                    <table role="table">
+                        <tbody><tr>
+                                <th>Operator</th>
+                                <th>Description</th>
+                                <th>Example</th>
+                            </tr>
+                            <tr>
+                                <td><code>&lt;</code></td>
+                                <td>Match values lower than search term</td>
+                                <td>&lt;1412</td>
+                            </tr>
+                            <tr>
+                                <td><code>&lt;=</code></td>
+                                <td>Match values lower than or equal to search term</td>
+                                <td>&lt;=1412</td>
+                            </tr>
+                            <tr>
+                                <td><code>&gt;</code></td>
+                                <td>Match values greater than search term</td>
+                                <td>&gt;1412</td>
+                            </tr>
+                            <tr>
+                                <td><code>&gt;=</code></td>
+                                <td>Match values greater than or equal to search term</td>
+                                <td>&gt;=1412</td>
+                            </tr>
+                            <tr>
+                                <td><code>=</code></td>
+                                <td>Exact match: match only the whole search term(s)</td>
+                                <td>=Sydney</td>
+                            </tr>
+                            <tr>
+                                <td><code>*</code></td>
+                                <td>Partial match of search term(s) (default operator)</td>
+                                <td>*Syd</td>
+                            </tr>
+                            <tr>
+                                <td><code>!</code></td>
+                                <td>Match data different from search term(s)</td>
+                                <td>!Sydney</td>
+                            </tr>
+                            <tr>
+                                <td><code>{</code></td>
+                                <td>Match data starting with search term</td>
+                                <td>{S</td>
+                            </tr>
+                            <tr>
+                                <td><code>}</code></td>
+                                <td>Match data ending with search term</td>
+                                <td>}y</td>
+                            </tr>
+                            <tr>
+                                <td><code>||</code></td>
+                                <td>Match data containing at least one of the search term(s)</td>
+                                <td>Sydney || Adelaide</td>
+                            </tr>
+                            <tr>
+                                <td><code>&amp;&amp;</code></td>
+                                <td>Match data containing all search terms</td>
+                                <td>&gt;4.3 &amp;&amp; &lt;25.3</td>
+                            </tr>
+                            <tr>
+                                <td><code>[empty]</code></td>
+                                <td>Match empty data</td>
+                                <td>[empty]</td>
+                            </tr>
+                            <tr>
+                                <td><code>[nonempty]</code></td>
+                                <td>Match data which is not empty</td>
+                                <td>[nonempty]</td>
+                            </tr>
+                            <tr>
+                                <td><code>rgx:</code></td>
+                                <td>Use a regular expression to match data</td>
+                                <td>rgx:de$</td>
+                            </tr>
+                        </tbody></table>
+                        <p>Be wary of whitespace in expressions: &gt;= 10/11/2012 is incorrect, &gt;=10/11/2012 is correct.</p>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

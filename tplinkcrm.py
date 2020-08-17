@@ -371,6 +371,47 @@ def conradSoiDashboard():
         last_day = last_day, 
     )
 
+@app.route('/conrad-sellout/yoy')
+@login_required(['DE'])
+def conradSelloutYoy():
+    result = session.query(
+            ConradSellout.date.label('date'), 
+            ConradSellout.product_id.label('product_id'), 
+            ConradSellout.type.label('type'), 
+            func.sum(ConradSellout.qty).label('qty'), 
+        ).filter(
+            ConradSellout.company == 'DEUTSCHLAND', 
+        ).group_by(
+            'date', 'type', 'product_id'
+        ).order_by(
+            'date'
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    result_df['date'] = pd.to_datetime(result_df['date'])
+    last_day = result_df['date'].iloc[-1]
+    result_df['date'] = result_df['date'] - timedelta(days=3)
+    result_df['week'] = result_df['date'].dt.week
+    last_week = result_df['week'].iloc[-1]
+    result_df = result_df[result_df['week']<=last_week]
+    result_df['year'] = result_df['date'].dt.year
+    result_df.drop(columns=['date', 'week'], inplace=True)
+    sellout_df = result_df.groupby(['product_id', 'type', 'year'], as_index=False).sum()
+    result = session.query(
+            Product.id.label('product_id'), 
+            Product.category.label('category'), 
+            Product.sku.label('sku')
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    sellout_df = sellout_df.merge(result_df, on='product_id', how='left')
+    sellout_df.drop(columns=['product_id'], inplace=True)
+    sellout_json = sellout_df.to_json(orient='records')
+    return render_template(
+        'conrad_sellout_yoy.html', 
+        login = login_session, 
+        last_day = last_day, 
+        sellout_json = sellout_json, 
+    )
+
 @app.route('/conrad-soi/store')
 @login_required(['DE'])
 def conradSoiStore():
@@ -458,41 +499,50 @@ def conradSoiStore():
 @app.route('/conrad-sellout/detail')
 @login_required(['DE'])
 def conradSelloutDetail():
-    result = session.query(
-            Product
-        ).filter(
-            Product.id == product_id
-        ).first()
+    product = request.args.get('product')
+    if product.isdigit():
+        result = session.query(
+                Product
+            ).filter(
+                Product.id == product
+            ).first()
+    else:
+        result = session.query(
+                Product
+            ).filter(
+                    Product.sku == product
+            ).first()
+    if not result:
+        return "Invalid input: Wrong SKU or Product ID"
     sku = result.sku
+    product_id = result.id
     result = session.query(
-            Sellout.date.label('date'), 
-            func.sum(Sellout.qty).label('qty'), 
+            ConradSellout.date.label('date'), 
+            ConradSellout.type.label('type'), 
+            ConradSellout.location.label('location'), 
+            func.sum(ConradSellout.qty).label('qty'), 
         ).filter(
-            Sellout.product_id == product_id, 
-            Sellout.account_id == conrad_id, 
+            ConradSellout.company == 'DEUTSCHLAND', 
+            ConradSellout.product_id == product_id, 
         ).group_by(
-            'date'
+            'date', 'type', 'location'
         ).order_by(
             'date'
         )
     result_df = pd.read_sql(result.statement, result.session.bind)
     result_df['date'] = pd.to_datetime(result_df['date'])
-    result_df.set_index('date', inplace=True)
-    # D1 Sellout
-    d1_sellout_df = result_df
-    row_count = result_df.shape[0]
-    # D7 Sellout
-    d7_sellout_df = result_df[row_count%7:].resample('7D').sum()
-    # D30 Sellout
-    d30_sellout_df = result_df[row_count%30:].resample('30D').sum()
+    last_day = result_df['date'].iloc[-1]
+    result_df['date'] = result_df['date'] - timedelta(days=3)
+    result_df['year'] = result_df['date'].dt.year
+    result_df['week'] = result_df['date'].dt.week
+    result_df.drop(columns=['date'], inplace=True)
+    sellout_json = result_df.to_json(orient='records')
     return render_template(
         'conrad_sellout_detail.html', 
         login = login_session, 
-        country = user.country, 
         sku = sku, 
-        d1_sellout_df = d1_sellout_df, 
-        d7_sellout_df = d7_sellout_df, 
-        d30_sellout_df = d30_sellout_df, 
+        last_day = last_day, 
+        sellout_json = sellout_json, 
     )
 
 @app.route('/conrad-sellin-sellout')
@@ -1669,10 +1719,16 @@ def revenueDownload():
 def accountDownload():
     user = getUserById(login_session['id'])
     result = session.query(
-            NameToAccount.name.label('Name'), 
-            NameToAccount.account_id.label('Account ID'), 
+            Account.id.label('Account ID'), 
+            Account.name.label('Name'), 
+            Account.tax.label('Tax'), 
+            Account.street.label('Street'), 
+            Account.postcode.label('Postcode'), 
+            Account.city.label('City'), 
+            Account.type.label('Type'), 
+            Account.url.label('Website'), 
         ).filter(
-            NameToAccount.country == user.country, 
+            Account.country == user.country, 
         )
     account_df = pd.read_sql(result.statement, result.session.bind)
     writer = pd.ExcelWriter('/var/www/tplinkcrm/report/accounts.xlsx', engine='xlsxwriter')

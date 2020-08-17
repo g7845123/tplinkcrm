@@ -1,0 +1,131 @@
+{% extends "template.html" %}
+
+{% block head %}
+<link href="{{ url_for('static', filename='webdatarocks/webdatarocks.min.css') }}" rel="stylesheet"/>
+{% endblock %}
+
+{% block content %}
+    <h1 class="page-header">
+        Conrad {{sku}} Sellout Detail
+    </h1>
+    <p>Last update: {{last_day.strftime('%Y-%m-%d')}}</p>
+    <label class="radio-inline"><input type="radio" name="sellout-view-optradio" checked="checked" id="sellout-channel-view">Channel View</label>
+    <label class="radio-inline"><input type="radio" name="sellout-view-optradio" id="sellout-store-view">Store View</label>
+    <div id="sellout"></div>
+{% endblock %}
+
+
+{% block script %}
+<script src="{{ url_for('static', filename='webdatarocks/webdatarocks.toolbar.min.js') }}"></script>
+<script src="{{ url_for('static', filename='webdatarocks/webdatarocks.js') }}"></script>
+<script>
+var selloutJson = JSON.parse({{sellout_json|tojson|safe}});
+var selloutChannelView = {
+    dataSource: {
+        data: selloutJson
+    }, 
+    "slice": {
+        "rows": [
+            {
+                "uniqueName": "week"
+            }
+        ],
+        "columns": [
+            {
+                "uniqueName": "year"
+            },
+            {
+                "uniqueName": "type"
+            },
+            {
+                "uniqueName": "Measures"
+            }
+        ],
+        "measures": [
+            {
+                "uniqueName": "qty",
+                "aggregation": "sum"
+            }
+        ],
+    },
+    "options": {
+        "grid": {
+            "showGrandTotals": "columns"
+        }, 
+        "drillThrough": false
+    }
+}
+var selloutStoreView = {
+    dataSource: {
+        data: selloutJson
+    }, 
+    "slice": {
+        "reportFilters": [
+            {
+                "uniqueName": "type",
+                "filter": {
+                    "members": [
+                        "type.FILIALEN"
+                    ]
+                }
+            }
+        ],
+        "rows": [
+            {
+                "uniqueName": "week"
+            }
+        ],
+        "columns": [
+            {
+                "uniqueName": "year"
+            },
+            {
+                "uniqueName": "location"
+            },
+            {
+                "uniqueName": "Measures"
+            }
+        ],
+        "measures": [
+            {
+                "uniqueName": "qty",
+                "aggregation": "sum"
+            }
+        ]
+    },
+    "options": {
+        "grid": {
+            "showGrandTotals": "columns"
+        }
+    }
+}
+var pivot = new WebDataRocks({
+    container: "#sellout",
+    beforetoolbarcreated: customizeToolbar,
+    toolbar: true,
+    report: selloutChannelView
+});
+function customizeToolbar(toolbar) {
+    var tabs = toolbar.getTabs(); // get all tabs from the toolbar
+    toolbar.getTabs = function() {
+        for(i=tabs.length-1;i>=0;i--){
+            let cur_tab = tabs[i];
+            if(['Connect', 'Open', 'Save', 'Export', 'Format', 'Options'].includes(cur_tab.title)){
+                tabs.splice(i, 1);
+            }
+        }
+        return tabs;
+    }
+}
+// Channel view action 
+var element = document.getElementById('sellout-channel-view');
+$(element).click(function () {
+    pivot.setReport(selloutChannelView);
+});
+// Store view action 
+var element = document.getElementById('sellout-store-view');
+$(element).click(function () {
+    pivot.setReport(selloutStoreView);
+});
+</script>
+{% endblock %}
