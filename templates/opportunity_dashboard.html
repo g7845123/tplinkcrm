@@ -6,7 +6,7 @@
 {% endblock %}
 
 {% block content %}
-<h2>Opportunities Dashboard <a class="btn btn-primary" href=" {{ url_for('addOpportunity') }} ">Add</a></h2>
+<h2>Opportunities Dashboard <a class="btn btn-primary" href=" {{ url_for('addOpportunity') }} ">Add</a> <button type="button" class="btn btn-primary" id="clear-filter" onclick="tf.clearFilters();">Reset Filter</button></h2>
 <p>Hint: you can use <a role="button" data-toggle="modal" data-target="#advance-filter-help">these options</a> for advanced filtering</p>
 <table class="display" id="opportunity-table">
     <thead>
@@ -59,30 +59,30 @@ $(document).ready(function() {
         "stateSave": true,
     });
     */
-    var tf = new TableFilter('opportunity-table', {
-        base_path: "{{ url_for('static', filename='tablefilter/') }}", 
-        state: { // Enable state persistence
-            types: ['local_storage'], // Possible values: 'local_storage' 'hash' or 'cookie'
-            sort: true,
-        },
-        col_types: [
-            'string', // Name
-            'string', // Manager
-            'string', // Partner
-            'string', // BU
-            'number', // Amount
-            'string', // Enduser
-            'string', // Distributor
-            { type: 'date', format: '{yyyy}-{MM}-{dd}' }, // Start
-            { type: 'date', format: '{yyyy}-{MM}-{dd}' }, // End
-            'string', // Stage
-            'string', // PO Number
-            'string', // Type
-        ],
-        extensions: [{ name: 'sort' }]
-    });
-    tf.init();
 });
+var tf = new TableFilter('opportunity-table', {
+    base_path: "{{ url_for('static', filename='tablefilter/') }}", 
+    state: { // Enable state persistence
+        types: ['local_storage'], // Possible values: 'local_storage' 'hash' or 'cookie'
+        sort: true,
+    },
+    col_types: [
+        'string', // Name
+        'string', // Manager
+        'string', // Partner
+        'string', // BU
+        'number', // Amount
+        'string', // Enduser
+        'string', // Distributor
+        { type: 'date', format: '{yyyy}-{MM}-{dd}' }, // Start
+        { type: 'date', format: '{yyyy}-{MM}-{dd}' }, // End
+        'string', // Stage
+        'string', // PO Number
+        'string', // Type
+    ],
+    extensions: [{ name: 'sort' }]
+});
+tf.init();
 </script>
 
 <!-- Modal for advanced search -->

@@ -630,9 +630,6 @@ def conradSellinSellout():
         sellin_sellout_df = sellin_sellout_df, 
     )
 
-
-            
-
 @app.route('/amazon-sellout/detail')
 @login_required(['DE'])
 def amazonSelloutDetail():
@@ -1684,8 +1681,22 @@ def productDownload():
     return send_file('/var/www/tplinkcrm/report/products.xlsx')
 
 @app.route('/revenue/download')
-@login_required(['admin'])
+@login_required(['admin', 'manager'])
 def revenueDownload():
+    user = getUserById(login_session['id'])
+    result = session.query(
+            Account.id.label('account_id'), 
+            Account.name.label('account_name'), 
+            Account.type.label('account_type'), 
+            Account.tax.label('account_tax'), 
+            Account.street.label('account_street'), 
+            Account.postcode.label('account_postcode'), 
+            Account.city.label('account_city'), 
+            Account.url.label('account_website'), 
+        ).filter(
+            Account.country == user.country
+        )
+    account_df = pd.read_sql(result.statement, result.session.bind)
     result = session.query(
             Sellin.account_id.label('account_id'), 
             func.extract('year', Sellin.date).label('year'), 
@@ -1693,29 +1704,23 @@ def revenueDownload():
         ).group_by(
             'account_id', 'year'
         )
-    sellin_df = pd.read_sql(result.statement, result.session.bind)
-    sellin_df = pd.pivot_table(
-            sellin_df, 
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    result_df = pd.pivot_table(
+            result_df, 
             values='revenue', 
             columns=['year'], 
             index=['account_id'], 
             aggfunc=np.sum, 
             fill_value=0
         )
-    result = session.query(
-            Account.id.label('account_id'), 
-            Account.name.label('account_name'), 
-            Account.type.label('account_type'), 
-        )
-    result_df = pd.read_sql(result.statement, result.session.bind)
-    sellin_df = sellin_df.merge(result_df, on='account_id', how='left')
-    writer = pd.ExcelWriter('/var/www/tplinkcrm/report/revenue.xlsx', engine='xlsxwriter')
-    sellin_df.to_excel(writer, index=False)
+    account_df = account_df.merge(result_df, on='account_id', how='left')
+    writer = pd.ExcelWriter('/var/www/tplinkcrm/report/{}_revenue.xlsx'.format(login_session['id']), engine='xlsxwriter')
+    account_df.to_excel(writer, index=False)
     writer.save()
-    return send_file('/var/www/tplinkcrm/report/revenue.xlsx')
+    return send_file('/var/www/tplinkcrm/report/{}_revenue.xlsx'.format(login_session['id']), cache_timeout=3600)
 
 @app.route('/account/download')
-@login_required(['ES', 'DE'])
+@login_required(['admin', 'manager'])
 def accountDownload():
     user = getUserById(login_session['id'])
     result = session.query(
@@ -4785,17 +4790,24 @@ def editAccount(account_id):
             account_city = request.form.get('account-city')
             account_pam = request.form.get('account-pam')
             account_stage = request.form.get('account-stage')
+            account_manager_id = request.form.get('account-manager')
             account_partners = request.form.getlist('competitor-partners')
             tp_partner = request.form.get('tp-partner')
             if tp_partner:
                 account_partners.append(tp_partner)
             account_store = request.form.get('account-store')
             account_store = bool(account_store)
-            if account.name: 
+            if account_name: 
                 if 'manager' not in login_session['roles']:
                     flash('Not authorized to change account name')
                 elif account_name.upper() != account.name:
                     account.name = account_name.upper()
+            if account_manager_id and account_manager_id.isdigit(): 
+                account_manager_id = int(account_manager_id)
+                if 'manager' not in login_session['roles']:
+                    flash('Not authorized to change account manager')
+                elif account_manager_id != account.user_id:
+                    account.user_id = account_manager_id
             if account_tax:
                 account.tax = account_tax.upper()
             if account_type:
@@ -5168,6 +5180,124 @@ def opportunityLineUploadCheck():
             login = login_session, 
             errors = errors, 
             opportunity_line_df = opportunity_line_df, 
+        )
+
+@app.route('/opportunity/query', methods=['GET', 'POST'])
+@login_required(['ES', 'DE'])
+def opportunityQuery():
+    manager_ids = request.form.getlist('manager-ids')
+    account_ids = request.form.getlist('account-ids')
+    account_types = request.form.getlist('account-types')
+    distri_ids = request.form.getlist('distri-ids')
+    start_start = request.form.get('start-start')
+    start_end = request.form.get('start-end')
+    end_start = request.form.get('end-start')
+    end_end = request.form.get('end-end')
+    opportunity_status = request.form.getlist('opportunity-status')
+    user = getUserById(login_session['id'])
+    result = session.query(
+            Opportunity.id, 
+            Opportunity.created, 
+            Opportunity.po_number, 
+            Opportunity.name.label('opportunity_name'), 
+            Opportunity.end_user, 
+            Opportunity.amount, 
+            Opportunity.date_start, 
+            Opportunity.date_end, 
+            Opportunity.status, 
+            Opportunity.sector, 
+            Opportunity.source, 
+            Opportunity.type, 
+            Opportunity.note, 
+            Opportunity.account_id, 
+            Opportunity.distri_id, 
+        )
+    if start_start:
+        start_start = parsing_date(start_start)
+        result = result.filter(
+            Opportunity.date_start >= start_start
+        )
+    if start_end:
+        start_end = parsing_date(start_end)
+        result = result.filter(
+            Opportunity.date_start <= start_end
+        )
+    if end_start:
+        end_start = parsing_date(end_start)
+        result = result.filter(
+            Opportunity.date_end >= end_start
+        )
+    if end_end:
+        end_end = parsing_date(end_end)
+        result = result.filter(
+            Opportunity.date_end <= end_end
+        )
+    if opportunity_status:
+        result = result.filter(
+            Opportunity.status.in_(opportunity_status)
+        )
+    opportunity_df = pd.read_sql(result.statement, result.session.bind)
+    result = session.query(
+            Account.id.label('account_id'), 
+            Account.name.label('account_name'), 
+            Account.type.label('account_type'), 
+            Account.user_id.label('manager_id'), 
+        ).filter(
+            Account.country == user.country, 
+        )
+    if manager_ids:
+        result = result.filter(
+            Account.user_id.in_(manager_ids)
+        )
+    if account_ids: 
+        result = result.filter(
+            Account.id.in_(account_ids)
+        )
+    if account_types:
+        result = result.filter(
+            Account.type.in_(account_types)
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    opportunity_df = opportunity_df.merge(result_df, on='account_id', how='inner')
+    result = session.query(
+            Account.id.label('distri_id'), 
+            Account.name.label('distri_name'), 
+        ).filter(
+            Account.country == user.country, 
+        )
+    if distri_ids: 
+        result = result.filter(
+            Account.id.in_(distri_ids)
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    opportunity_df = opportunity_df.merge(result_df, on='distri_id', how='inner')
+    result = session.query(
+            User.id.label('manager_id'), 
+            User.name.label('manager_name'), 
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    opportunity_df = opportunity_df.merge(result_df, on='manager_id', how='left')
+    opportunity_df['amount'] = opportunity_df['amount'].fillna(0)
+    opportunity_df['manager_name'] = opportunity_df['manager_name'].fillna('')
+    managers = session.query(
+            User
+        ).filter(
+            User.country == user.country, 
+        )
+    distributors = session.query(
+            Account
+        ).filter(
+            Account.type == 'DISTRIBUTOR', 
+            Account.country == user.country, 
+        )
+    return render_template(
+            'opportunity_query.html', 
+            login = login_session, 
+            opportunity_df = opportunity_df, 
+            managers = managers, 
+            ACCOUNT_TYPE_ALL = ACCOUNT_TYPE_ALL, 
+            distributors = distributors, 
+            OPPORTUNITY_STATUS_ALL = OPPORTUNITY_STATUS_ALL, 
         )
 
 @app.route('/opportunity/dashboard', methods=['GET'])
@@ -5558,6 +5688,7 @@ def viewAccount(account_id):
                 competitor_partner_db = competitor_partner_db, 
                 opportunity_df = opportunity_df, 
                 INTERACTION_TYPE_ALL = INTERACTION_TYPE_ALL, 
+                ACCOUNT_TYPE_ALL = ACCOUNT_TYPE_ALL, 
             )
 
 @app.route('/manager/<int:manager_id>')
@@ -5985,13 +6116,6 @@ def resetPwd():
         send_email(EMAIL_USERNAME, EMAIL_PASSWORD, recipient, 'Password reseted', body)
         flash('Password reseted')
         return redirect('/')
-
-# @app.route('/test', methods=['GET', 'POST'])
-# @login_required(['admin'])
-# def test():
-#     from_arg = request.args.get('from')
-#     return "You come from " + from_arg
-
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():

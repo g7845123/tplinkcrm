@@ -3,6 +3,7 @@
 {% block head %}
 <link href="{{url_for('static', filename='css/select2.min.css')}}" rel="stylesheet" />
 <link rel="stylesheet" href="{{ url_for('static', filename='DataTables/css/jquery.dataTables.min.css') }}">
+<link href="{{url_for('static', filename='datepicker/css/bootstrap-datepicker3.min.css')}}" rel="stylesheet" />
 {% endblock %}
 
 {% block content %}
@@ -83,16 +84,19 @@
             <label for="account-type">Type</label>
             <select class="form-control" name="account-type">
                 <option id='account-type-default' selected>{{account.type}}</option>
-                <option value="UNCATEGORIZED">UNCATEGORIZED</option>
-                <option value="ONLINE">ONLINE</option>
-                <option value="SUB-DISTY">SUB-DISTY</option>
-                <option value="ABROAD">ABROAD</option>
-                <option value="ISP">ISP</option>
-                <option value="RESELLER">RESELLER</option>
-                <option value="RETAIL">RETAIL</option>
-                <option value="B2B">B2B</option>
-                <option value="OTHER INDUSTRY">OTHER INDUSTRY</option>
+                {% for account_type in ACCOUNT_TYPE_ALL %}
+                <option value="{{account_type}}">{{account_type}}</option>
+                {% endfor %}
             </select>
+            {% if 'manager' in login.roles %}
+            <label for="account-manager">Manager</label>
+            <select class="form-control" name="account-manager">
+                <option id='account-manager-default' value={{account.manager.id}} selected>{{account.manager.name}}</option>
+                {% for manager in managers %}
+                <option value={{manager.id}}>{{manager.name}}</option>
+                {% endfor %}
+            </select>
+            {% endif %}
             <label for="account-url">Website</label>
             <input class="form-control" name="account-url" value="{{account.url or ''}}">
             <label for="account-street">Street</label>
@@ -270,7 +274,7 @@
     <h2>Opportunities <a class="btn btn-primary" href=" {{url_for('addOpportunity', account_id=account.id) | replace('_', '-') }} ">Add</a></h2>
 
     {% if not opportunity_df.empty %}
-    <table class="table table-striped">
+    <table class="table table-striped" id="opportunity-table">
         <thead>
             <tr>
                 <th>PO Number</th>
@@ -351,6 +355,19 @@
     {% endif %}
 
     <h2>Sellin Overview</h2>
+    <p>This section and below sections by default compare with YTD data. If you want to change time period, please change period below</p>
+    <div class='row'>
+        <form class="col-md-9" method="GET">
+            <label for="report-range">Date range</label>
+            <div class="input-daterange input-group" id="report-range">
+                <span class="input-group-addon">From</span>
+                <input type="text" class="input-sm form-control" id="start" name="start" value="{{date_start.strftime("%Y-%m-%d")}}" />
+                <span class="input-group-addon">to</span>
+                <input type="text" class="input-sm form-control" id="end" name="end" value="{{date_end.strftime("%Y-%m-%d")}}" />
+            </div>
+            <button type="submit" class="btn btn-primary">Submit</button>
+        </form>
+    </div>
     {% if not overview_df.empty %}
     <div id="sellin-overview" style="width: 310px; height: 400px; margin: 0 auto"></div>
     {% else %}
@@ -435,6 +452,8 @@
 <script src="{{url_for('static', filename='js/select2.min.js')}}"></script>
 <!-- DataTable -->
 <script src="{{ url_for('static', filename='DataTables/js/jquery.dataTables.min.js') }}"></script>
+<!-- Date-Picker Plugin -->
+<script src="{{url_for('static', filename='datepicker/js/bootstrap-datepicker.min.js')}}"></script>
 
 <script>
 $(document).ready(function() {
@@ -442,6 +461,18 @@ $(document).ready(function() {
         width: "100%", 
     });
     $('#interaction-table').DataTable({
+        "order": [[0, "desc"]]
+    });
+    $('#opportunity-table').DataTable({
+        "order": [[7, "desc"]]
+    });
+    $('#start').datepicker({
+        format: "yyyy-mm-dd", 
+        autoclose: true, 
+    });
+    $('#end').datepicker({
+        format: "yyyy-mm-dd", 
+        autoclose: true, 
     });
 });
 function basicInfoToggle() {

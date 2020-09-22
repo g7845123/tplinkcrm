@@ -1,0 +1,157 @@
+{% extends "template.html" %}
+
+{% block head %}
+<link href="{{url_for('static', filename='css/select2.min.css')}}" rel="stylesheet" />
+<link rel="stylesheet" href="{{ url_for('static', filename='DataTables/css/jquery.dataTables.min.css') }}">
+<link href="{{url_for('static', filename='datepicker/css/bootstrap-datepicker3.min.css')}}" rel="stylesheet" />
+{% endblock %}
+
+{% block content %}
+<h2>Opportunities Dashboard <a class="btn btn-primary" href=" {{ url_for('addOpportunity') }} ">Add</a> <button type="button" class="btn btn-primary" id="filter-btn" data-toggle="collapse" data-target="#filter-form">Show Filter</button>
+</h2>
+<form id="filter-form" class="collapse form-group" method="POST">
+    <div class="form-group">
+        <label for="manager-ids">Manager</label>
+        <select class="form-control select2-local" id="manager-ids" name="manager-ids" multiple="multiple">
+            {% for manager in managers %}
+            <option value="{{manager.id}}">{{manager.name}}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="account-ids">Partner / VAR</label>
+        <select id="account-ids" name="account-ids" multiple="multiple">
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="account-types">BU</label>
+        <select class="form-control select2-local" id="account-types" name="account-types" multiple="multiple">
+            {% for account_type in ACCOUNT_TYPE_ALL %}
+            <option value="{{account_type}}">{{account_type}}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="distri-ids">Distributor</label>
+        <select class="form-control select2-local" id="distri-ids" name="distri-ids" multiple="multiple">
+            {% for distributor in distributors %}
+            <option value="{{distributor.id}}">{{distributor.name}}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="opportunity-start">Start Date</label>
+        <div class="input-daterange input-group" id="opportunity-start">
+            <span class="input-group-addon">From</span>
+            <input type="text" class="input-sm form-control date-picker" id="start-start" name="start-start" value="" />
+            <span class="input-group-addon">to</span>
+            <input type="text" class="input-sm form-control date-picker" id="start-end" name="start-end" value="" />
+        </div>
+    </div>
+    <div class="form-group">
+        <label for="opportunity-end">End Date</label>
+        <div class="input-daterange input-group" id="opportunity-end">
+            <span class="input-group-addon">From</span>
+            <input type="text" class="input-sm form-control date-picker" id="end-start" name="end-start" value="" />
+            <span class="input-group-addon">to</span>
+            <input type="text" class="input-sm form-control date-picker" id="end-end" name="end-end" value="" />
+        </div>
+    </div>
+    <div class="form-group">
+        <label for="opportunity-status">Stage</label>
+        <select class="form-control select2-local" id="opportunity-status" name="opportunity-status" multiple="multiple">
+            {% for opportunity_status in OPPORTUNITY_STATUS_ALL %}
+            <option value="{{opportunity_status}}">{{opportunity_status}}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <button class="btn btn-primary" type="submit" name="submit" value="basic-info-edit">Submit</button>
+</form>
+
+<table class="display" id="opportunity-table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Manager</th>
+            <th>Partner/VAR</th>
+            <th>Business Unit</th>
+            <th>Project Value</th>
+            <th>End User</th>
+            <th>Distributor</th>
+            <th>Start</th>
+            <th>End</th>
+            <th>Stage</th>
+            <th>PO Number</th>
+            <th>Type</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for idx, row in opportunity_df.iterrows() %}
+            <td>
+                <a href="{{ url_for('editOpportunity', opportunity_id=row.id) }}">{{row.opportunity_name}}</a>
+            </td>
+            <td>{{row.manager_name}}</td>
+            <td><a href="{{ url_for('viewAccount', account_id=row.account_id) }}" target="_blank">{{row.account_name}}</a></td>
+            <td>{{row.account_type}}</td>
+            <td>{{'{:.0f}'.format(row.amount/100)}}</td>
+            <td>{{row.end_user}}</td>
+            <td>{{row.distri_name}}</td>
+            <td>{{row.date_start.strftime('%Y-%m-%d')}}</td>
+            <td>{{row.date_end.strftime('%Y-%m-%d')}}</td>
+            <td>{{row.status}}</td>
+            <td>{{row.po_number}}</td>
+            <td>{{row.type}}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
+
+{% block script %}
+<!-- Select2 -->
+<script src="{{url_for('static', filename='js/select2.min.js')}}"></script>
+<!-- DataTable -->
+<script src="{{ url_for('static', filename='DataTables/js/jquery.dataTables.min.js') }}"></script>
+<!-- Date-Picker -->
+<script src="{{url_for('static', filename='datepicker/js/bootstrap-datepicker.min.js')}}"></script>
+
+<script>
+$('#opportunity-table').DataTable({
+    'paging': false, 
+    "order": [[ 7, "desc" ]], 
+});
+$("#filter-form").on("hide.bs.collapse", function(){
+    $("#filter-btn").html('Show Filter');
+});
+$("#filter-form").on("show.bs.collapse", function(){
+    $("#filter-btn").html('Hide Filter');
+});
+$('.date-picker').datepicker({
+    format: "yyyy-mm-dd", 
+    autoclose: true, 
+});
+$('.select2-local').select2({
+    width: "100%", 
+});
+$("#account-ids").select2({
+    width: "100%", 
+    ajax: {
+        url: "/account/query",
+        dataType: 'json',
+        delay: 250,
+        data: function (params) {
+            var query = {
+                name: params.term,
+            }
+            // Query paramters will be ?name=[term]
+            return query;
+        }, 
+        processResults: function (data) {
+            return {
+                results: data
+            }
+        }, 
+    },
+});
+</script>
+{% endblock %}

@@ -68,7 +68,7 @@ function customizeToolbar(toolbar) {
     toolbar.getTabs = function() {
         for(i=tabs.length-1;i>=0;i--){
             let cur_tab = tabs[i];
-            if(['Connect', 'Open', 'Save', 'Export', 'Format', 'Options'].includes(cur_tab.title)){
+            if(['Connect', 'Open', 'Save', 'Format', 'Options'].includes(cur_tab.title)){
                 tabs.splice(i, 1);
             }
         }
