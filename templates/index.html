@@ -37,7 +37,12 @@
     <a href="/report-by-account/start" target="_blank" class="btn btn-primary">Customized Report by Account</a>
     <br><br>
 -->
+
     <h2>Report</h2>
+    <a href="{{ url_for('viewPartner', mode='tp-link') }}" class="btn btn-primary">TP-Link Partner Program</a>
+    <a href="{{ url_for('viewPartner', mode='competitor') }}" class="btn btn-primary">Competitor Partner Program</a>
+    <br>
+    <br>
     <label for="account-search">View by Account</label>
     <form class="form-group" id="account-search" method="GET" action="/account/search">
     <div class="input-group col-md-9">

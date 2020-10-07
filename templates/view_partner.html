@@ -1,0 +1,129 @@
+{% extends "template.html" %}
+
+{% block head %}
+<link href="{{url_for('static', filename='css/select2.min.css')}}" rel="stylesheet" />
+<link rel="stylesheet" href="{{ url_for('static', filename='DataTables/css/jquery.dataTables.min.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='DataTables/css/jquery.dataTables.additional.css') }}">
+{% endblock %}
+
+{% block content %}
+<h2>Partner Development</h2>
+<h3>Select Partner Level</h2>
+<p id="partner-msg" style="display: none;"></p>
+<select id="partner-level">
+    {% if partner_level_selected %}
+    <option value='{{partner_level_selected}}'>{{partner_level_selected}}</option>
+    {% else %}
+    <option></option>
+    {% endif %}
+    {% for level in partner_level_all %}
+    <option value='{{level}}'>{{level}}</option>
+    {% endfor %}
+</select>
+
+{% if partner_level_selected  %}
+<h3>View Revenue of {{partner_level_selected}}</h2>
+{% set cols=sellin_pivot_summary.columns[:-2] %}
+<table id="revenue-table" class="display">
+    <thead>
+        <tr>
+            <th></th>
+            <th>Account</th>
+            {% for col in cols %}
+            <th>{{col}}</th>
+            {% endfor %}
+            <th>{{this_year_end.year-1}} YTD</th>
+            <th>{{this_year_end.year}} YTD</th>
+            <th>YoY</th>
+            <th>Total</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for (account_id, account_name), row in sellin_pivot_summary.iterrows() %}
+        <tr id="{{account_id}}">
+            <td onclick="revenueDetailToggle({{account_id}})" ></td>
+            <td><a href="{{ url_for('viewAccount', account_id=account_id) }}" target="_blank">{{account_name}}</a></td>
+            {% for col in cols %}
+            <td>{{'{:.2f}'.format(row[col]/100)}}</td>
+            {% endfor %}
+            {% if account_id not in yoy_df.index %}
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            {% else %}
+            <td>{{'{:.2f}'.format(yoy_df.loc[account_id]['ytd_prev']/100)}}</td>
+            <td>{{'{:.2f}'.format(yoy_df.loc[account_id]['ytd']/100)}}</td>
+            <td>{{'{:.2%}'.format(yoy_df.loc[account_id]['yoy']/100)}}</td>
+            {% endif %}
+            <td>{{'{:.2f}'.format(row['total']/100)}}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
+{% endblock %}
+
+{% block script %}
+<!-- Select2 -->
+<script src="{{url_for('static', filename='js/select2.min.js')}}"></script>
+<!-- DataTable -->
+<script src="{{ url_for('static', filename='DataTables/js/jquery.dataTables.min.js') }}"></script>
+
+<script>
+var select2 = $("#partner-level").select2({
+    placeholder: "Select a Partner Level",
+    width: "100%"
+});
+select2.on("select2:select", function () { 
+    let partnerLevel = $("#partner-level").select2("data")[0].id;
+    let splitted = window.location.href.split("?");
+    let url = splitted[0];
+    let queryString = splitted[1];
+    let urlParams = new URLSearchParams(queryString);
+    let mode = urlParams.get('mode');
+    url += '?mode=' + mode
+    url += '&partner=' + partnerLevel 
+    window.location.href = url; 
+    $("#partner-level").prop("disabled", true);
+    $("#partner-msg").text("Calculating sales data of " + partnerLevel + ". Please wait. This may take time depending on account number in that partner level");
+    $("#partner-msg").show();
+});
+
+{% if partner_level_selected  %}
+var accountSellinDict = {}
+{% for account_id, account_sellin_df in sellin_pivot_detail_dict.items() %}
+accountSellinDict[{{account_id}}] = `{{ (account_sellin_df/100).to_html(float_format='{:10.2f}'.format) | safe }}`
+{% endfor %}
+var revenueTable = $('#revenue-table').DataTable({
+    'paging': false, 
+    'stateSave': true, 
+    "order": [[ 1, "asc" ]],
+    "columnDefs": [
+        { 
+            "className": 'details-control',
+            "orderable": false,
+            "data": null,
+            "defaultContent": '', 
+            "targets": 0
+        }
+    ]
+});
+function revenueDetailToggle(accountId) {
+    let revenueDetailTable = accountSellinDict[accountId];
+    let tr = $('#'+accountId);
+    let row = revenueTable.row( tr );
+    if ( row.child.isShown() ) {
+            // This row is already open - close it
+            row.child.hide();
+            tr.removeClass('shown');
+        }
+        else {
+            // Open this row
+            row.child( revenueDetailTable ).show();
+            tr.addClass('shown');
+        }
+}
+{% endif %}
+</script>
+{% endblock %}

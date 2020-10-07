@@ -69,7 +69,7 @@ def get_html_to_parse(debug=False):
     outfile.write(response.content)
     print('{} page {}: {} {}'.format(product.sku, page_num, review_url, response.status_code))
     time.sleep(wait)
-    return False, response.content
+    return False, response.status_code, response.content
 
 def html_stop_check(html_to_parse):
     if country == 'DE':
@@ -81,6 +81,9 @@ def html_stop_check(html_to_parse):
             return 'break'
         if 'Suchen Sie etwas' in str(html_to_parse):
             print('Invalid url, skip')
+            return 'break'
+        if 'Aus Deutschland' not in str(html_to_parse):
+            print('No review from Germany found')
             return 'break'
         return 'continue'
 
@@ -115,16 +118,12 @@ for product in products:
             print('{} reviews already existed, skip to next product'.format(dup_review))
             break
         wait = random.uniform(1, 10)
-        debug, html_to_parse = get_html_to_parse(debug=debug)
+        debug, status_code, html_to_parse = get_html_to_parse(debug=debug)
         if debug:
             print('Debug mode')
         else:
             print('Production mode')
-        if html_stop_check(html_to_parse) != 'continue':
-            break
-        parsed_html = BeautifulSoup(html_to_parse, 'html5lib')
-        review_divs = parsed_html.find_all('div', {'data-hook': 'review'})
-        if not review_divs:
+        if status_code!=requests.codes.ok or 'Bot Check' in str(html_to_parse):
             # possible be blocked
             print('Error detected, use new user agent and new IP')
             try_left -= 1
@@ -140,6 +139,10 @@ for product in products:
             new_ip = requests.get('https://ident.me', proxies=proxies).text
             print('New IP: {}'.format(new_ip))
             continue
+        if html_stop_check(html_to_parse) != 'continue':
+            break
+        parsed_html = BeautifulSoup(html_to_parse, 'html5lib')
+        review_divs = parsed_html.find_all('div', {'data-hook': 'review'})
         # Get data as expected
         try_left = 100
         page_num += 1

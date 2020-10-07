@@ -2857,7 +2857,6 @@ def uploadStock():
         stock_df['distributor'] = stock_df['distributor'].apply(lambda x: x.strip().upper())
         stock_df['sku'] = stock_df['sku'].apply(lambda x: str(x).strip().upper())
         stock_df['stock'] = pd.to_numeric(stock_df['stock'])
-        stock_col = pd.to_numeric(stock_df['stock'], errors='coerce')
         stock_df['bo'] = pd.to_numeric(stock_df['bo'])
         stock_df['bo'] = stock_df['bo'].fillna(0)
         result = session.query(
@@ -2880,12 +2879,6 @@ def uploadStock():
         result_df = pd.read_sql(result.statement, result.session.bind)
         stock_df = stock_df.merge(result_df, on='sku', how='left')
         stock_df.drop(columns=['sku'], inplace=True)
-        result = session.query(
-                Product.id.label('product_id'), 
-                Product.distri_cost.label('distri_cost')
-            )
-        result_df = pd.read_sql(result.statement, result.session.bind)
-        stock_df = stock_df.merge(result_df, on='product_id', how='left')
         assert stock_df.shape[0] == raw_row_count
         for index, row in stock_df.iterrows():
             newStock = Stock(
@@ -5300,6 +5293,116 @@ def opportunityQuery():
             OPPORTUNITY_STATUS_ALL = OPPORTUNITY_STATUS_ALL, 
         )
 
+@app.route('/partner', methods=['GET'])
+@login_required(['ES', 'DE'])
+def viewPartner():
+    user = getUserById(login_session['id'])
+    partner_level_selected = request.args.get('partner')
+    mode = request.args.get('mode')
+    if mode=='competitor':
+        partner_level_all = COMPETITOR_PARTNER_ALL
+    else:
+        partner_level_all = TP_PARTNER_ALL
+    if not partner_level_selected:
+        return render_template(
+                'view_partner.html', 
+                login = login_session, 
+                partner_level_all = partner_level_all, 
+                partner_level_selected = partner_level_selected, 
+            )
+    this_year_start, this_year_end = get_default_report_date_range()
+    last_year_start = date(this_year_start.year-1, 1, 1)
+    if this_year_end.month==2 and this_year_end.day==29:
+        last_year_end = date(this_year_end.year-1, this_year_end.month, this_year_end.day-1)
+    else:
+        last_year_end = date(this_year_end.year-1, this_year_end.month, this_year_end.day-1)
+    account_ids = session.query(
+            AccountPartner.account_id
+        ).filter(
+            AccountPartner.partner == partner_level_selected
+        )
+    result = session.query(
+            extract('year', Sellin.date).label('year'), 
+            extract('month', Sellin.date).label('month'), 
+            Sellin.account_id.label('account_id'), 
+            func.sum(Sellin.qty*Sellin.unit_price).label('revenue'), 
+        ).filter(
+            Sellin.account_id.in_(account_ids), 
+        ).group_by(
+            'year', 'month', 'account_id'
+        )
+    sellin_df = pd.read_sql(result.statement, result.session.bind)
+    sellin_df['year'] = sellin_df['year'].astype(int)
+    sellin_df['month'] = sellin_df['month'].astype(int)
+    result = session.query(
+            Account.id.label('account_id'), 
+            Account.name.label('account_name')
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind)
+    sellin_df = sellin_df.merge(result_df, on='account_id', how='left')
+    sellin_pivot_summary = pd.pivot_table(
+            sellin_df, 
+            values = 'revenue', 
+            index = ['account_id', 'account_name'], 
+            columns = ['year'], 
+            aggfunc=np.sum, 
+            fill_value=0, 
+        )
+    sellin_pivot_summary.fillna(0, inplace=True)
+    sellin_pivot_summary['total'] = sellin_pivot_summary.sum(axis=1)
+    sellin_pivot_detail = pd.pivot_table(
+            sellin_df, 
+            values = 'revenue', 
+            index = ['account_id'], 
+            columns = ['year', 'month'], 
+            aggfunc=np.sum, 
+            fill_value=0, 
+        )
+    sellin_pivot_detail_dict = {}
+    for account_id, row in sellin_pivot_detail.iterrows():
+        row = row.unstack()
+        row.rename_axis(None, axis=0, inplace=True)
+        row.rename_axis(None, axis=1, inplace=True)
+        row['Total'] = row.sum(axis=1)
+        sellin_pivot_detail_dict[account_id] = row
+    result = session.query(
+            Sellin.account_id.label('account_id'), 
+            func.sum(Sellin.qty*Sellin.unit_price).label('ytd'), 
+        ).filter(
+            Sellin.account_id.in_(account_ids), 
+            Sellin.date >= this_year_start, 
+            Sellin.date <= this_year_end, 
+        ).group_by(
+            'account_id'
+        )
+    yoy_df = pd.read_sql(result.statement, result.session.bind, index_col='account_id')
+    result = session.query(
+            Sellin.account_id.label('account_id'), 
+            func.sum(Sellin.qty*Sellin.unit_price).label('ytd_prev'), 
+        ).filter(
+            Sellin.account_id.in_(account_ids), 
+            Sellin.date >= last_year_start, 
+            Sellin.date <= last_year_end, 
+        ).group_by(
+            'account_id'
+        )
+    result_df = pd.read_sql(result.statement, result.session.bind, index_col='account_id')
+    yoy_df = yoy_df.merge(result_df, on='account_id', how='outer')
+    yoy_df.fillna(0, inplace=True)
+    yoy_df['yoy'] = yoy_df['ytd'] / yoy_df['ytd_prev'] - 1
+    yoy_df.rename_axis(None, axis=0, inplace=True)
+    return render_template(
+            'view_partner.html', 
+            login = login_session, 
+            sellin_pivot_summary = sellin_pivot_summary, 
+            sellin_pivot_detail_dict = sellin_pivot_detail_dict, 
+            partner_level_all = partner_level_all, 
+            partner_level_selected = partner_level_selected, 
+            this_year_end = this_year_end, 
+            yoy_df = yoy_df, 
+        )
+
+
 @app.route('/opportunity/dashboard', methods=['GET'])
 @login_required(['ES', 'DE'])
 def opportunityDashboard():
@@ -5389,7 +5492,7 @@ def viewAccount(account_id):
     tp_partner_db = ''
     for e in account_partner_db:
         if 'TP-Link' in e:
-            tp_partner_db = e[8:]
+            tp_partner_db = e
         else:
             competitor_partner_db.append(e)
     result = session.query(

@@ -124,7 +124,7 @@
             <select class="form-control" name="tp-partner">
                 <option value=""{% if not tp_partner_db %} selected{% endif %}>Not a Partner</option>
                 {% for tp_partner in tp_partner_all %}
-                <option value="TP-Link {{tp_partner}}"{% if tp_partner == tp_partner_db %} selected{% endif %}>{{tp_partner}}</option>
+                <option value="{{tp_partner}}"{% if tp_partner == tp_partner_db %} selected{% endif %}>{{tp_partner}}</option>
                 {% endfor %}
             </select>
             <label for="competitor-partners">Competitor Partner Program</label>
