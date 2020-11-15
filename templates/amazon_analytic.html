@@ -1,0 +1,343 @@
+{% extends "template.html" %}
+{% block content %}
+    <h1 class="page-header">
+        {{sku}} AMAZON Analytics
+    </h1>
+    <div id="container">
+        <div id="amazon-sellout"></div>
+        <div id="amazon-gv"></div>
+        <div id="amazon-conversion"></div>
+        <div id="amazon-stock"></div>
+    </div>
+{% endblock %}
+
+
+{% block script %}
+<!-- Resources -->
+<script src="{{url_for('static', filename='highcharts/highcharts.js')}}"></script>
+
+<script>
+
+var sellout = [
+    {% for idx, row in analytic_df.iterrows() %}
+    [
+        Date.UTC({{row.date.year}}, {{row.date.month-1}}, {{row.date.day}}),
+        {{ row.sellout }}
+    ], 
+    {% endfor %}
+];
+
+var stock = [
+    {% for idx, row in analytic_df.iterrows() %}
+    [
+        Date.UTC({{row.date.year}}, {{row.date.month-1}}, {{row.date.day}}),
+        {{ row.stock }}
+    ], 
+    {% endfor %}
+];
+
+var gv = [
+    {% for idx, row in analytic_df.iterrows() %}
+    [
+        Date.UTC({{row.date.year}}, {{row.date.month-1}}, {{row.date.day}}),
+        {{ row.gv }}, 
+    ], 
+    {% endfor %}
+];
+
+var gvFt = [
+    {% for idx, row in analytic_df.iterrows() %}
+    [
+        Date.UTC({{row.date.year}}, {{row.date.month-1}}, {{row.date.day}}),
+        {{ row.gv_ft }}, 
+    ], 
+    {% endfor %}
+];
+
+var conversion = [
+    {% for idx, row in analytic_df.iterrows() %}
+    [
+        Date.UTC({{row.date.year}}, {{row.date.month-1}}, {{row.date.day}}),
+        {{ row.conversion }} * 100, 
+    ], 
+    {% endfor %}
+];
+
+/**
+ * In order to synchronize tooltips and crosshairs, override the
+ * built-in events with handlers defined on the parent element.
+ */
+$('#container').bind('mousemove touchmove', function(e) {
+    var chart,
+      points,
+      point,
+      pivotPoint, 
+      i,
+      secSeriesIndex = 1;
+
+    for (i = 0; i < Highcharts.charts.length; i++) {
+      chart = Highcharts.charts[i];
+      e = chart.pointer.normalize(e); // Find coordinates within the chart	
+      points = [];
+      Highcharts.each(chart.series, function(p, i) {
+        if (!pivotPoint){
+          pivotPoint = p.searchPoint(e, true);
+          points.push(pivotPoint);
+        }
+        else {
+            p.points.forEach(point => {
+              if(point.x==pivotPoint.x){
+              points.push(point);
+              }
+            });
+        }
+      })
+      if (points) {
+        var number = 0;
+        Highcharts.each(points, function(p, i) {
+          if (!p.series.visible) {
+            points.splice(i - number, 1);
+            number++;
+          }
+        })
+        if (points.length) {
+          chart.tooltip.refresh(points); // Show the tooltip
+          chart.xAxis[0].drawCrosshair(e, points[0]); // Show the crosshair
+        }
+      }
+    }
+  });
+
+
+/**
+ * Override the reset function, we don't need to hide the tooltips and
+ * crosshairs.
+ */
+Highcharts.Pointer.prototype.reset = function () {
+    return undefined;
+};
+
+/**
+ * Synchronize zooming through the setExtremes event handler.
+ */
+function syncExtremes(e) {
+    var thisChart = this.chart;
+
+    if (e.trigger !== 'syncExtremes') { // Prevent feedback loop
+        Highcharts.each(Highcharts.charts, function (chart) {
+            if (chart !== thisChart) {
+                if (chart.xAxis[0].setExtremes) { // It is null while updating
+                    chart.xAxis[0].setExtremes(
+                        e.min,
+                        e.max,
+                        undefined,
+                        false,
+                        { trigger: 'syncExtremes' }
+                    );
+                }
+            }
+        });
+    }
+}
+Highcharts.chart('amazon-sellout', {
+    chart: {
+        spacingTop: 20,
+        spacingBottom: 20,
+        zoomType: 'x', 
+        resetZoomButton: {
+            position: {
+                align: 'left',
+            }
+        }
+    },
+    title: {
+        text: '{{sku}} Amazon Sellout',
+        margin: 0,
+        x: 30
+    },
+    credits: {
+        enabled: false
+    },
+    legend: {
+        enabled: false
+    },
+    xAxis: {
+        crosshair: true,
+        type: 'datetime',
+        title: {
+            text: 'Date'
+        }, 
+        events: {
+            setExtremes: syncExtremes
+        },
+    },
+    yAxis: {
+        title: {
+            text: "Qty"
+        }, 
+        min: 0, 
+    },
+    tooltip: {
+        shared: true, 
+        pointFormat: "Sellout: {point.y:.0f}pcs", 
+    },
+    series: [{
+        data: sellout,
+        name: 'Sellout',
+        type: 'line',
+        fillOpacity: 0.3,
+    }]
+});
+Highcharts.chart('amazon-gv', {
+    chart: {
+        spacingTop: 20,
+        spacingBottom: 20,
+        zoomType: 'x', 
+        resetZoomButton: {
+            position: {
+                align: 'left',
+            }
+        }
+    },
+    title: {
+        text: '{{sku}} Amazon Glance View',
+        margin: 0,
+        x: 30
+    },
+    credits: {
+        enabled: false
+    },
+    legend: {
+        enabled: true
+    },
+    xAxis: {
+        crosshair: true,
+        type: 'datetime',
+        title: {
+            text: 'Date'
+        }, 
+        events: {
+            setExtremes: syncExtremes
+        },
+    },
+    yAxis: {
+        title: {
+            text: "Page View"
+        }
+    },
+    tooltip: {
+        shared: true, 
+        pointFormat: "{series.name}: {point.y}<br>", 
+    },
+    series: [{
+        data: gv,
+        name: 'Glance View',
+        type: 'line',
+        fillOpacity: 0.3,
+    }, {
+        data: gvFt,
+        name: 'Fast Track',
+        type: 'line',
+        fillOpacity: 0.3,
+    }]
+});
+Highcharts.chart('amazon-conversion', {
+    chart: {
+        spacingTop: 20,
+        spacingBottom: 20,
+        zoomType: 'x', 
+        resetZoomButton: {
+            position: {
+                align: 'left',
+            }
+        }
+    },
+    title: {
+        text: '{{sku}} Amazon Conversion',
+        margin: 0,
+        x: 30
+    },
+    credits: {
+        enabled: false
+    },
+    legend: {
+        enabled: false
+    },
+    xAxis: {
+        crosshair: true,
+        type: 'datetime',
+        title: {
+            text: 'Date'
+        }, 
+        events: {
+            setExtremes: syncExtremes
+        },
+    },
+    yAxis: {
+        title: {
+            text: "Qty"
+        }, 
+        min: 0, 
+    },
+    tooltip: {
+        shared: true, 
+        pointFormat: "Conversion: {point.y:.2f}%", 
+    },
+    series: [{
+        data: conversion,
+        name: 'Conversion Rate',
+        type: 'line',
+        fillOpacity: 0.3,
+    }]
+});
+Highcharts.chart('amazon-stock', {
+    chart: {
+        spacingTop: 20,
+        spacingBottom: 20,
+        zoomType: 'x', 
+        resetZoomButton: {
+            position: {
+                align: 'left',
+            }
+        }
+    },
+    title: {
+        text: '{{sku}} Amazon Stock',
+        margin: 0,
+        x: 30
+    },
+    credits: {
+        enabled: false
+    },
+    legend: {
+        enabled: false
+    },
+    xAxis: {
+        crosshair: true,
+        type: 'datetime',
+        title: {
+            text: 'Date'
+        }, 
+        events: {
+            setExtremes: syncExtremes
+        },
+    },
+    yAxis: {
+        title: {
+            text: "Qty"
+        }, 
+        min: 0, 
+    },
+    tooltip: {
+        shared: true, 
+        pointFormat: "Stock: {point.y:.0f}pcs", 
+    },
+    series: [{
+        data: stock,
+        name: 'Stock',
+        type: 'line',
+        fillOpacity: 0.3,
+    }]
+});
+</script>
+{% endblock %}

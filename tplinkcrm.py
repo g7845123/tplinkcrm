@@ -12,7 +12,7 @@ from sqlalchemy.sql import label
 from sqlalchemy import extract
 from sqlalchemy.orm import aliased
 from sqlalchemy import and_, or_
-from database_setup import Base, User, Product, SkuToProduct, Stock, Sellout, Productline, PriceLink, PriceHistory, Task, ResetPwdToken, Account, NameToAccount, Sellin, Role, EmailSubscription, PackingListDetail, AccountNote, AccountContact, AccountPartner, AmazonReview, ConradSellout, ConradStock, Opportunity, OpportunityLine
+from database_setup import Base, User, Product, SkuToProduct, Stock, Sellout, Productline, PriceLink, PriceHistory, Task, ResetPwdToken, Account, NameToAccount, Sellin, Role, EmailSubscription, PackingListDetail, AccountNote, AccountContact, AccountPartner, AmazonSoi, AmazonReview, AmazonTraffic, ConradSellout, ConradStock, Opportunity, OpportunityLine
 
 import requests
 from bs4 import BeautifulSoup
@@ -117,7 +117,7 @@ def send_email(user, pwd, recipient, subject, body, cc=None, files=None):
 def parsing_date(x):
     if type(x) in [pd.Timestamp, datetime]:
         return x
-    for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%d.%m.%Y'):
+    for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%d.%m.%Y', '%Y%m%d'):
         try:
             return datetime.strptime(x, fmt)
         except:
@@ -185,30 +185,22 @@ def mainPage():
 def amazonSoiDashboard():
     user = getUserById(login_session['id'])
     result = session.query(
-            Account
-        ).filter(
-            Account.name == 'AMAZON {}'.format(user.country)
-        ).first()
-    amazon_id = result.id
-    result = session.query(
             Product.sku.label('sku'), 
             Product.id.label('product_id'), 
         )
     soi_df = pd.read_sql(result.statement, result.session.bind)
     result = session.query(
-            Sellout.product_id.label('product_id'), 
-            Sellout.date.label('date'), 
-            Sellout.qty.label('qty'), 
-        ).filter(
-            Sellout.account_id == amazon_id
+            AmazonSoi.product_id.label('product_id'), 
+            AmazonSoi.date.label('date'), 
+            AmazonSoi.sellout.label('qty'), 
         ).order_by(
-            Sellout.date.desc()
+            AmazonSoi.date.desc()
         )
     last_day = result.first().date
     # last 90 day
     first_day = last_day - timedelta(days=90)
     result = result.filter(
-            Sellout.date > first_day, 
+            AmazonSoi.date > first_day, 
         )
     result_df = pd.read_sql(result.statement, result.session.bind)
     result_df = result_df.groupby('product_id').sum()
@@ -223,7 +215,7 @@ def amazonSoiDashboard():
     # last 30 day
     first_day = last_day - timedelta(days=30)
     result = result.filter(
-            Sellout.date > first_day, 
+            AmazonSoi.date > first_day, 
         )
     result_df = pd.read_sql(result.statement, result.session.bind)
     result_df = result_df.groupby('product_id').sum()
@@ -235,7 +227,7 @@ def amazonSoiDashboard():
     # last 7 day
     first_day = last_day - timedelta(days=7)
     result = result.filter(
-            Sellout.date > first_day, 
+            AmazonSoi.date > first_day, 
         )
     result_df = pd.read_sql(result.statement, result.session.bind)
     result_df = result_df.groupby('product_id').sum()
@@ -249,13 +241,12 @@ def amazonSoiDashboard():
     soi_df.sort_values(by='d90', ascending=False, inplace=True) 
     # Stock
     result = session.query(
-            Stock.product_id.label('product_id'), 
-            Stock.date.label('date'), 
-            func.sum(Stock.stock).label('stock'), 
-            func.sum(Stock.bo).label('bo'), 
+            AmazonSoi.product_id.label('product_id'), 
+            AmazonSoi.date.label('date'), 
+            func.sum(AmazonSoi.stock).label('stock'), 
+            func.sum(AmazonSoi.bo).label('bo'), 
         ).filter(
-            Stock.account_id == amazon_id, 
-            Stock.date == last_day, 
+            AmazonSoi.date == last_day, 
         ).group_by(
             'product_id', 
             'date'
@@ -630,17 +621,10 @@ def conradSellinSellout():
         sellin_sellout_df = sellin_sellout_df, 
     )
 
-@app.route('/amazon-sellout/detail')
+@app.route('/amazon-analytic')
 @login_required(['DE'])
-def amazonSelloutDetail():
-    user = getUserById(login_session['id'])
+def amazonAnalytic():
     product_id = request.args.get('product')
-    result = session.query(
-            Account
-        ).filter(
-            Account.name == 'AMAZON {}'.format(user.country)
-        ).first()
-    amazon_id = result.id
     result = session.query(
             Product
         ).filter(
@@ -648,34 +632,37 @@ def amazonSelloutDetail():
         ).first()
     sku = result.sku
     result = session.query(
-            Sellout.date.label('date'), 
-            func.sum(Sellout.qty).label('qty'), 
+            AmazonSoi.date.label('date'), 
+            func.sum(AmazonSoi.sellout).label('sellout'), 
+            func.sum(AmazonSoi.stock).label('stock'), 
+            func.sum(AmazonSoi.bo).label('bo'), 
         ).filter(
-            Sellout.product_id == product_id, 
-            Sellout.account_id == amazon_id, 
+            AmazonSoi.product_id == product_id, 
         ).group_by(
             'date'
-        ).order_by(
+        )
+    analytic_df = pd.read_sql(result.statement, result.session.bind)
+    # analytic_df.drop(columns=['id'], inplace=True)
+    result = session.query(
+            AmazonTraffic.date.label('date'), 
+            func.sum(AmazonTraffic.gv).label('gv'), 
+            func.sum(AmazonTraffic.gv_ft).label('gv_ft'), 
+        ).filter(
+            AmazonTraffic.product_id == product_id, 
+        ).group_by(
             'date'
         )
     result_df = pd.read_sql(result.statement, result.session.bind)
-    result_df['date'] = pd.to_datetime(result_df['date'])
-    result_df.set_index('date', inplace=True)
-    # D1 Sellout
-    d1_sellout_df = result_df
-    row_count = result_df.shape[0]
-    # D7 Sellout
-    d7_sellout_df = result_df[row_count%7:].resample('7D').sum()
-    # D30 Sellout
-    d30_sellout_df = result_df[row_count%30:].resample('30D').sum()
+    # result_df.drop(columns=['id'], inplace=True)
+    analytic_df = analytic_df.merge(result_df, on=['date'], how='outer')
+    analytic_df['conversion'] = analytic_df['sellout'] / analytic_df['gv']
+    analytic_df.fillna(0, inplace=True)
+    analytic_df.sort_values(by='date', ascending=True, inplace=True) 
     return render_template(
-        'amazon_sellout_detail.html', 
+        'amazon_analytic.html', 
         login = login_session, 
-        country = user.country, 
         sku = sku, 
-        d1_sellout_df = d1_sellout_df, 
-        d7_sellout_df = d7_sellout_df, 
-        d30_sellout_df = d30_sellout_df, 
+        analytic_df = analytic_df, 
     )
 
 def get_amazon_review_info(country):
@@ -3038,16 +3025,23 @@ def amazonSoiUploadCheck():
     user = getUserById(login_session['id'])
     response = {}
     # Check whether date is of right format
-    amazon_soi_date = request.form.get('amazon-soi-date')
+    amazon_soi_file = request.files.get('amazon-soi-file')
+    amazon_soi_date = amazon_soi_file.filename.split('.')[0].replace('Forecast and Inventory Planning_DE', '')
     parsed_date = parsing_date(amazon_soi_date)
-    if not amazon_soi_date:
-        response['date'] = amazon_soi_date
+    if not parsed_date:
+        response['dateFormat'] = amazon_soi_date
         return simplejson.dumps(response)
     else:
-        response['date'] = 'pass'
-    amazon_soi_file = request.files.get('amazon-soi-file')
+        response['dateFormat'] = 'pass'
     amazon_soi_df = pd.read_excel(amazon_soi_file)
-    amazon_soi_df.replace('—', '0', inplace=True)
+    header_date_str = '{}/{}/{}'.format(parsed_date.month, parsed_date.day, parsed_date.year-2000)
+    header_date_str = 'Viewing=[{e} - {e}]'.format(e=header_date_str)
+    if header_date_str not in amazon_soi_df.columns:
+        response['dateConsistency'] = amazon_soi_date
+    else:
+        response['dateConsistency'] = 'pass'
+    amazon_soi_df = pd.read_excel(amazon_soi_file, header=1, na_values='—')
+    amazon_soi_df.fillna(0, inplace=True)
     # Check whether header in submission is ok
     required_header = pd.Series(['ASIN', 'Ordered Units', 'Available Inventory', 'Open Purchase Order Quantity'])
     header_err = required_header[~required_header.isin(amazon_soi_df.columns)]
@@ -3096,16 +3090,10 @@ def amazonSoiUploadCheck():
     else: 
         response['asin'] = 'pass'
     # Check whether there are duplicated sellout
-    amazon = session.query(
-            Account
-        ).filter(
-            Account.name == 'AMAZON {}'.format(user.country)
-        ).first()
     result = session.query(
-            Sellout
+            AmazonSoi
         ).filter(
-            Sellout.date == parsed_date, 
-            Sellout.account_id == amazon.id, 
+            AmazonSoi.date == parsed_date, 
         )
     if result.count():
         response['duplication'] = amazon_soi_date
@@ -3113,6 +3101,108 @@ def amazonSoiUploadCheck():
     else: 
         response['duplication'] = 'pass'
     return simplejson.dumps(response)
+
+@app.route('/amazon-traffic/upload-check', methods=['POST'])
+@login_required(['admin', 'uploader'])
+def amazonTrafficUploadCheck():
+    user = getUserById(login_session['id'])
+    response = {}
+    # Check whether date is of right format
+    amazon_traffic_file = request.files.get('amazon-traffic-file')
+    amazon_traffic_date = amazon_traffic_file.filename.split('.')[0].replace('Traffic Diagnostic_DE', '')
+    parsed_date = parsing_date(amazon_traffic_date)
+    if not parsed_date:
+        response['dateFormat'] = amazon_traffic_date
+        return simplejson.dumps(response)
+    else:
+        response['dateFormat'] = 'pass'
+    amazon_traffic_df = pd.read_excel(amazon_traffic_file)
+    header_date_str = '{}/{}/{}'.format(parsed_date.month, parsed_date.day, parsed_date.year-2000)
+    header_date_str = 'Viewing=[{e} - {e}]'.format(e=header_date_str)
+    if header_date_str not in amazon_traffic_df.columns:
+        response['dateConsistency'] = amazon_traffic_date
+    else:
+        response['dateConsistency'] = 'pass'
+    amazon_traffic_df = pd.read_excel(amazon_traffic_file, sheet_name='DE_Detail View_Traffic Diagnost', header=1, na_values='—')
+    # Check whether header in submission is ok
+    required_header = pd.Series(['ASIN', 'Glance Views', 'Fast Track Glance View'])
+    header_err = required_header[~required_header.isin(amazon_traffic_df.columns)]
+    if not header_err.empty:
+        response['header'] = header_err.to_dict()
+        return simplejson.dumps(response)
+    else:
+        response['header'] = 'pass'
+    amazon_traffic_df.rename(columns = {
+            'ASIN': 'asin', 
+            'Glance Views': 'gv', 
+            'Fast Track Glance View': 'ft_rate', 
+        }, inplace = True)
+    # Check whether all ASINs are mapped
+    asins = pd.unique(amazon_traffic_df['asin'])
+    asins = pd.Series(asins)
+    unmapped_asins = get_unmapped_sku(asins.apply(lambda x: 'AMAZON-{}'.format(str(x).strip().upper())))
+    if not unmapped_asins.empty:
+        response['asin'] = unmapped_asins.to_dict()
+        return simplejson.dumps(response)
+    else: 
+        response['asin'] = 'pass'
+    # Check whether there are duplicated sellout
+    result = session.query(
+            AmazonTraffic
+        ).filter(
+            AmazonTraffic.date == parsed_date, 
+        )
+    if result.count():
+        response['duplication'] = amazon_traffic_date
+        return simplejson.dumps(response)
+    else: 
+        response['duplication'] = 'pass'
+    return simplejson.dumps(response)
+
+@app.route('/amazon-traffic/upload', methods=['GET', 'POST'])
+@login_required(['admin', 'uploader'])
+def uploadAmazonTraffic():
+    user = getUserById(login_session['id'])
+    if request.method == 'POST':
+        amazon_traffic_file = request.files.get('amazon-traffic-file')
+        amazon_traffic_date = amazon_traffic_file.filename.split('.')[0].replace('Traffic Diagnostic_DE', '')
+        parsed_date = parsing_date(amazon_traffic_date)
+        amazon_traffic_df = pd.read_excel(amazon_traffic_file, sheet_name='DE_Detail View_Traffic Diagnost', header=1, na_values='—')
+        amazon_traffic_df.rename(columns = {
+                'ASIN': 'asin', 
+                'Glance Views': 'gv', 
+                'Fast Track Glance View': 'ft_rate', 
+            }, inplace = True)
+        # Remove duplicated ASIN
+        amazon_traffic_df.drop_duplicates(subset='asin', inplace=True)
+        amazon_traffic_df.rename(columns=lambda x: pd.to_datetime(x, format='%Y-%m-%d', errors='ignore'), inplace=True)
+        amazon_traffic_df['sku'] = amazon_traffic_df['asin'].apply(lambda x: 'AMAZON-{}'.format(str(x).strip().upper()))
+        result = session.query(
+                SkuToProduct.sku.label('sku'), 
+                SkuToProduct.product_id.label('product_id')
+            )
+        result_df = pd.read_sql(result.statement, result.session.bind)
+        amazon_traffic_df = amazon_traffic_df.merge(result_df, on='sku', how='left')
+        amazon_traffic_df['gv_ft'] = (amazon_traffic_df['gv']*amazon_traffic_df['ft_rate']).round(0)
+        amazon_traffic_df.fillna(0, inplace=True)
+        # Traffic
+        for index, row in amazon_traffic_df.iterrows():
+            newAmazonTraffic = AmazonTraffic(
+                   date = parsed_date, 
+                   gv = row.gv, 
+                   gv_ft = row.gv_ft, 
+                   product_id = row.product_id, 
+                )
+            session.add(newAmazonTraffic)
+        session.commit()
+        flash('Successfully uploaded')
+        return redirect('/')
+    else:
+        return render_template(
+            'amazon_traffic_upload.html', 
+            login = login_session, 
+            user = user, 
+        )
 
 @app.route('/amazon-soi/upload', methods=['GET', 'POST'])
 @login_required(['admin', 'uploader'])
@@ -3127,11 +3217,10 @@ def uploadAmazonSoi():
         if not amazon:
             flash('Please set up AMAZON {} as an account first'.format(user.country))
             return redirect('/')
-        amazon_soi_date = request.form.get('amazon-soi-date')
-        parsed_date = parsing_date(amazon_soi_date)
         amazon_soi_file = request.files.get('amazon-soi-file')
-        amazon_soi_df = pd.read_excel(amazon_soi_file)
-        amazon_soi_df.replace('—', '0', inplace=True)
+        amazon_soi_date = amazon_soi_file.filename.split('.')[0].replace('Forecast and Inventory Planning_DE', '')
+        parsed_date = parsing_date(amazon_soi_date)
+        amazon_soi_df = pd.read_excel(amazon_soi_file, header=1, na_values='—')
         amazon_soi_df.rename(columns = {
                 'ASIN': 'asin', 
                 'Ordered Units': 'sellout', 
@@ -3148,23 +3237,17 @@ def uploadAmazonSoi():
             )
         result_df = pd.read_sql(result.statement, result.session.bind)
         amazon_soi_df = amazon_soi_df.merge(result_df, on='sku', how='left')
-        # Sellout and Stock
+        amazon_soi_df.fillna(0, inplace=True)
+        # Soi
         for index, row in amazon_soi_df.iterrows():
-            newSellout = Sellout(
+            newAmazonSoi = AmazonSoi(
                    date = parsed_date, 
-                   qty = row.sellout, 
-                   account_id = amazon.id, 
-                   product_id = row.product_id, 
-                )
-            newStock = Stock(
-                   date = parsed_date, 
+                   sellout = row.sellout, 
                    stock = row.stock, 
                    bo = row.bo, 
-                   account_id = amazon.id, 
                    product_id = row.product_id, 
                 )
-            session.add(newSellout)
-            session.add(newStock)
+            session.add(newAmazonSoi)
         session.commit()
         flash('Successfully uploaded')
         return redirect('/')
@@ -6395,7 +6478,9 @@ admin.add_view(SellinView(Sellin, session))
 admin.add_view(ProductView(Product, session))
 admin.add_view(StockView(Stock, session))
 admin.add_view(SkuToProductView(SkuToProduct, session))
+admin.add_view(ModelView(AmazonSoi, session))
 admin.add_view(ModelView(AmazonReview, session))
+admin.add_view(ModelView(AmazonTraffic, session))
 admin.add_view(PriceLinkView(PriceLink, session))
 admin.add_view(PriceHistoryView(PriceHistory, session))
 admin.add_view(ModelView(Task, session))

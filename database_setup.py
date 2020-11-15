@@ -211,6 +211,29 @@ class AmazonReview(Base):
     product_id = Column(Integer, ForeignKey('product.id'))
     product = relationship('Product')
 
+class AmazonTraffic(Base):
+    __tablename__ = 'amazon_traffic'
+ 
+    id = Column(Integer, primary_key=True)
+    date = Column(Date)
+    gv = Column(Integer)
+    gv_ft = Column(Integer)
+
+    product_id = Column(Integer, ForeignKey('product.id'))
+    product = relationship('Product')
+
+class AmazonSoi(Base):
+    __tablename__ = 'amazon_soi'
+ 
+    id = Column(Integer, primary_key=True)
+    date = Column(Date)
+    sellout = Column(Integer)
+    stock = Column(Integer)
+    bo = Column(Integer)
+
+    product_id = Column(Integer, ForeignKey('product.id'))
+    product = relationship('Product')
+
 class PriceLink(Base):
     __tablename__ = 'price_link'
  
